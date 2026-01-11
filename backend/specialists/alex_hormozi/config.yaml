@@ -1,0 +1,46 @@
+specialist:
+  id: alex_hormozi
+  name: Alex Hormozi
+  title: Empreendedor & Autor
+  avatar: /assets/specialists/alex_hormozi.png
+
+  areas:
+    - Vendas
+    - Ofertas
+    - Crescimento de Negocios
+    - Marketing
+    - Precificacao
+
+  books:
+    - title: "$100M Offers"
+      year: 2021
+      topics:
+        - Grand Slam Offers
+        - Value Equation
+        - Pricing
+    - title: "$100M Leads"
+      year: 2023
+      topics:
+        - Lead Generation
+        - Advertising
+        - Content Marketing
+
+  companies:
+    - name: Gym Launch
+      description: Ajudou milhares de academias a escalar
+    - name: Acquisition.com
+      description: Portfolio de empresas de servicos
+
+  social:
+    youtube: "@AlexHormozi"
+    instagram: "@hormozi"
+    twitter: "@AlexHormozi"
+
+  knowledge_base:
+    files:
+      - 100m_offers.txt
+      - 100m_leads.txt
+      - principles.json
+    embeddings_model: text-embedding-004
+    chunk_size: 500
+    chunk_overlap: 50
