@@ -62,7 +62,7 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 - [x] Story 3.3: Refactor gemini.ts em Modulos + Streaming com Vercel AI SDK
 - [x] Story 3.4: Error Boundaries + Error Handling Strategy
 - [x] Story 3.5: Chat UX Redesign (Textarea, Avatares, Header, Actions, Scroll)
-- [ ] Story 3.6: Type Safety + Model Config Externalization
+- [x] Story 3.6: Type Safety + Model Config Externalization
 - [ ] Story 3.7: Context Window Optimization (Cached Content API)
 
 ### Fase 4: Qualidade + Mobile + Acessibilidade
