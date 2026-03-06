@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { getMinds, getConversations, getConversationMessages } from "@/app/actions";
-import ChatInterface from "@/components/ChatInterface";
-import ConversationList from "@/components/ConversationList";
+import ChatHeader from "@/components/chat/chat-header";
+import ChatInterface from "@/components/chat/chat-interface";
+import ConversationList from "@/components/chat/conversation-list";
 import type { ChatMessage } from "@/lib/types";
+import Link from "next/link";
 
 interface ChatPageProps {
   params: Promise<{ mindId: string }>;
@@ -51,17 +52,7 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
 
   return (
     <div className="min-h-screen p-4 sm:p-8 font-[family-name:var(--font-geist-sans)] flex flex-col">
-      <header className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-cyan-400">
-          {decodedName}
-        </h1>
-        <Link
-          href="/"
-          className="text-sm text-gray-500 hover:text-white transition-colors"
-        >
-          Encerrar Sessao
-        </Link>
-      </header>
+      <ChatHeader mindName={decodedName} backHref="/" />
 
       <main className="flex-1 w-full flex gap-4">
         {/* Conversation Sidebar */}
