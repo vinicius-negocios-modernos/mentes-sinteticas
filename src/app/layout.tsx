@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,18 +15,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mentes Sintéticas",
-  description: "Diálogos estratégicos com clones digitais de grandes pensadores.",
+  title: "Mentes Sinteticas",
+  description: "Dialogos estrategicos com clones digitais de grandes pensadores.",
 };
 
-export default function RootLayout({
+async function signOut() {
+  "use server";
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/");
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="pt-BR">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        {user && (
+          <nav className="fixed top-0 right-0 z-50 p-4 flex items-center gap-4">
+            <span className="text-xs text-gray-400 truncate max-w-[200px]">
+              {user.email}
+            </span>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+              >
+                Sair
+              </button>
+            </form>
+          </nav>
+        )}
         {children}
       </body>
     </html>

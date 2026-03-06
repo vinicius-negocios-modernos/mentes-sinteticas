@@ -1,6 +1,7 @@
 "use server";
 
 import { createMindChat, getAvailableMinds } from "@/lib/gemini";
+import { createClient } from "@/lib/supabase/server";
 import type { GeminiHistoryEntry, SendMessageResponse, ErrorType } from "@/lib/types";
 
 export async function getMinds() {
@@ -24,6 +25,22 @@ function classifyError(error: unknown): { message: string; type: ErrorType } {
 
 export async function sendMessage(mindName: string, message: string, history: GeminiHistoryEntry[]): Promise<SendMessageResponse> {
     try {
+        // Verify authenticated session before allowing chat
+        const supabase = await createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return {
+                success: false,
+                error: "Sessao expirada. Faca login novamente.",
+                errorType: "API_ERROR",
+            };
+        }
+
+        // user.id available for future use (Story 2.3 — conversation persistence)
+        const _userId = user.id;
+        void _userId;
+
         const chat = await createMindChat(mindName, history);
         const result = await chat.sendMessage(message);
         const response = await result.response;
