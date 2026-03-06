@@ -14,6 +14,17 @@ import {
   createMessage,
   listByConversation,
 } from "@/lib/services/messages";
+import {
+  checkRateLimit,
+  incrementRateLimit,
+  cleanupExpiredLimits,
+  DEFAULT_LIMITS,
+} from "@/lib/services/rate-limiter";
+import {
+  SendMessageInputSchema,
+  MindIdSchema,
+  ConversationIdSchema,
+} from "@/lib/validations/chat";
 import type {
   GeminiHistoryEntry,
   SendMessageResponse,
@@ -71,6 +82,15 @@ function classifyError(error: unknown): { message: string; type: ErrorType } {
 }
 
 /**
+ * Format Zod validation errors into a user-friendly message.
+ */
+function formatValidationErrors(
+  issues: { message: string }[]
+): string {
+  return issues.map((i) => i.message).join(" ");
+}
+
+/**
  * Resolve a mind display-name to its DB UUID.
  * Returns null if not found in DB (graceful fallback).
  */
@@ -85,8 +105,8 @@ async function getMindIdByName(mindName: string): Promise<string | null> {
 
 /**
  * Send a message in a chat session.
- * If conversationId is provided, appends to existing conversation.
- * Otherwise creates a new conversation with auto-generated title.
+ * Validates inputs with Zod, checks rate limits, sanitizes message,
+ * then processes the request.
  */
 export async function sendMessage(
   mindName: string,
@@ -95,7 +115,27 @@ export async function sendMessage(
   conversationId?: string
 ): Promise<SendMessageResponse> {
   try {
-    // Verify authenticated session
+    // ── Step 1: Validate inputs with Zod ──────────────────────────
+    const validation = SendMessageInputSchema.safeParse({
+      mindName,
+      message,
+      conversationId,
+    });
+
+    if (!validation.success) {
+      return {
+        success: false,
+        error: formatValidationErrors(validation.error.issues),
+        errorType: "API_ERROR",
+      };
+    }
+
+    // Use validated & sanitized data
+    const validatedMindName = validation.data.mindName;
+    const sanitizedMessage = validation.data.message;
+    const validatedConversationId = validation.data.conversationId;
+
+    // ── Step 2: Verify authenticated session ──────────────────────
     const supabase = await createClient();
     const {
       data: { user },
@@ -112,19 +152,30 @@ export async function sendMessage(
 
     const userId = user.id;
 
-    // Resolve mind DB id (may be null if minds not seeded yet)
-    const mindDbId = await getMindIdByName(mindName);
+    // ── Step 3: Check rate limits ─────────────────────────────────
+    const rateLimitResult = await checkRateLimit(userId, "sendMessage", [
+      { name: "per-minute", config: DEFAULT_LIMITS.sendMessage.perMinute },
+      { name: "per-hour", config: DEFAULT_LIMITS.sendMessage.perHour },
+    ]);
 
-    // Create or validate conversation
-    let activeConversationId = conversationId;
+    if (!rateLimitResult.allowed) {
+      return {
+        success: false,
+        error: `Limite de ${rateLimitResult.maxAllowed} mensagens por ${rateLimitResult.limitType === "per-minute" ? "minuto" : "hora"} atingido. Tente novamente em ${rateLimitResult.retryAfterSeconds} segundos.`,
+        errorType: "RATE_LIMITED",
+      };
+    }
+
+    // ── Step 4: Resolve mind and manage conversation ──────────────
+    const mindDbId = await getMindIdByName(validatedMindName);
+
+    let activeConversationId = validatedConversationId;
 
     if (!activeConversationId && mindDbId) {
-      // First message — create conversation with auto-title
-      const title = message.slice(0, 60);
+      const title = sanitizedMessage.slice(0, 60);
       const conversation = await createConversation(userId, mindDbId, title);
       activeConversationId = conversation.id;
     } else if (activeConversationId) {
-      // Validate ownership
       const existing = await getConversationById(
         activeConversationId,
         userId
@@ -138,18 +189,26 @@ export async function sendMessage(
       }
     }
 
-    // Persist user message to DB
+    // ── Step 5: Persist user message ──────────────────────────────
     if (activeConversationId) {
-      await createMessage(activeConversationId, "user", message);
+      await createMessage(activeConversationId, "user", sanitizedMessage);
     }
 
-    // Call Gemini
-    const chat = await createMindChat(mindName, history);
-    const result = await chat.sendMessage(message);
+    // ── Step 6: Increment rate limit counter ──────────────────────
+    await incrementRateLimit(userId, "sendMessage");
+
+    // Lazy cleanup of expired rate limit records (fire-and-forget)
+    cleanupExpiredLimits().catch(() => {
+      // Cleanup failure is non-critical
+    });
+
+    // ── Step 7: Call Gemini with sanitized message ────────────────
+    const chat = await createMindChat(validatedMindName, history);
+    const result = await chat.sendMessage(sanitizedMessage);
     const response = await result.response;
     const text = response.text();
 
-    // Persist assistant response to DB
+    // ── Step 8: Persist assistant response ────────────────────────
     if (activeConversationId) {
       await createMessage(activeConversationId, "assistant", text);
       await touchConversation(activeConversationId);
@@ -176,6 +235,12 @@ export async function sendMessage(
 export async function getConversations(
   mindName?: string
 ): Promise<Conversation[]> {
+  // Validate mindName if provided
+  if (mindName !== undefined) {
+    const validation = MindIdSchema.safeParse(mindName);
+    if (!validation.success) return [];
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -198,6 +263,10 @@ export async function getConversations(
 export async function getConversationMessages(
   conversationId: string
 ): Promise<Message[]> {
+  // Validate conversationId
+  const validation = ConversationIdSchema.safeParse(conversationId);
+  if (!validation.success) return [];
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -205,7 +274,6 @@ export async function getConversationMessages(
 
   if (!user) return [];
 
-  // Verify ownership
   const conversation = await getConversationById(conversationId, user.id);
   if (!conversation) return [];
 
@@ -218,6 +286,10 @@ export async function getConversationMessages(
 export async function deleteConversation(
   conversationId: string
 ): Promise<boolean> {
+  // Validate conversationId
+  const validation = ConversationIdSchema.safeParse(conversationId);
+  if (!validation.success) return false;
+
   const supabase = await createClient();
   const {
     data: { user },

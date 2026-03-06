@@ -15,3 +15,8 @@ export {
   type NewConversation,
 } from "./conversations";
 export { messages, type Message, type NewMessage } from "./messages";
+export {
+  rateLimits,
+  type RateLimit,
+  type NewRateLimit,
+} from "./rate-limits";
