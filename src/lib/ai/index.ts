@@ -23,6 +23,15 @@ export {
 // Chat (non-streaming, legacy path)
 export { createMindChat } from "./chat";
 
+// Context Window Management
+export {
+  estimateTokenCount,
+  estimateMessagesTokens,
+  truncateHistory,
+  getContextBudget,
+  CONTEXT_LIMITS,
+} from "./context";
+
 // Streaming (Vercel AI SDK)
 export { streamMindChat } from "./stream";
 export type { StreamMindChatOptions } from "./stream";

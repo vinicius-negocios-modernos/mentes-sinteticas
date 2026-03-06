@@ -36,6 +36,10 @@ function showErrorToast(appError: AppError, onRetry?: () => void) {
   }
 }
 
+const MAX_HISTORY_MESSAGES = Number(
+  process.env.NEXT_PUBLIC_MAX_HISTORY_MESSAGES ?? 50
+);
+
 interface ChatInterfaceProps {
   mindName: string;
   mindDescription?: string;
@@ -147,7 +151,11 @@ export default function ChatInterface({
     try {
       // Build history for the API (exclude greeting for new conversations)
       const startIdx = initialMessages ? 0 : 1;
-      const historyForApi = messages.slice(startIdx).map((m) => ({
+      const allHistory = messages.slice(startIdx);
+      const trimmedHistory = allHistory.length > MAX_HISTORY_MESSAGES
+        ? allHistory.slice(-MAX_HISTORY_MESSAGES)
+        : allHistory;
+      const historyForApi = trimmedHistory.map((m) => ({
         role: m.role === "model" ? "assistant" : "user",
         content: m.text,
       }));
@@ -212,7 +220,11 @@ export default function ChatInterface({
       // Fall back to non-streaming server action
       try {
         const startIdx = initialMessages ? 0 : 1;
-        const historyForApi = messages.slice(startIdx).map((m) => ({
+        const fallbackAll = messages.slice(startIdx);
+        const fallbackTrimmed = fallbackAll.length > MAX_HISTORY_MESSAGES
+          ? fallbackAll.slice(-MAX_HISTORY_MESSAGES)
+          : fallbackAll;
+        const historyForApi = fallbackTrimmed.map((m) => ({
           role: m.role,
           parts: [{ text: m.text }],
         }));

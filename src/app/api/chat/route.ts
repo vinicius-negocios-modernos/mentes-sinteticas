@@ -15,6 +15,7 @@ import {
 } from "@/lib/services/conversations";
 import { createMessage } from "@/lib/services/messages";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
+import { estimateMessagesTokens } from "@/lib/ai/context";
 
 export async function POST(request: Request) {
   try {
@@ -109,6 +110,14 @@ export async function POST(request: Request) {
     });
 
     // ── Step 8: Stream response ───────────────────────────────────
+    const incomingHistory = history ?? [];
+    if (incomingHistory.length > 0) {
+      const estimatedTokens = estimateMessagesTokens(incomingHistory);
+      console.log(
+        `[context] Incoming history: ${incomingHistory.length} messages, ~${estimatedTokens} estimated tokens`
+      );
+    }
+
     const capturedConversationId = activeConversationId;
 
     const result = await streamMindChat({

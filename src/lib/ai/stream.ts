@@ -4,6 +4,7 @@ import { getGoogleProvider } from "./client";
 import { getAIConfig } from "./config";
 import { buildSystemPrompt, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
 import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
+import { truncateHistory, estimateMessagesTokens } from "./context";
 
 /**
  * Build the message array for streaming, including knowledge context injection.
@@ -49,8 +50,18 @@ async function buildStreamMessages(
     });
   }
 
+  // Truncate history to fit within context budget
+  const truncatedHistory = truncateHistory(history);
+  const beforeTokens = estimateMessagesTokens(history);
+  const afterTokens = estimateMessagesTokens(truncatedHistory);
+  if (beforeTokens !== afterTokens) {
+    console.log(
+      `[context] History truncated: ${history.length} → ${truncatedHistory.length} messages, ~${beforeTokens} → ~${afterTokens} tokens`
+    );
+  }
+
   // Add conversation history
-  messages.push(...history);
+  messages.push(...truncatedHistory);
 
   // Add current user message
   messages.push({

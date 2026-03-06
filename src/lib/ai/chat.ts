@@ -4,6 +4,7 @@ import { getGenAI } from "./client";
 import { getAIConfig } from "./config";
 import { buildSystemPrompt } from "./prompts";
 import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
+import { getContextBudget, estimateTokenCount } from "./context";
 
 /**
  * Create a non-streaming chat session for a mind (legacy path).
@@ -44,6 +45,29 @@ export async function createMindChat(mindName: string, history: GeminiHistoryEnt
       return { text: p.text ?? "" };
     }),
   }));
+
+  // Truncate history to fit within context budget
+  const { maxHistoryTokens, maxMessages } = getContextBudget();
+  if (chatHistory.length > maxMessages) {
+    chatHistory = chatHistory.slice(-maxMessages);
+  }
+  let tokenCount = 0;
+  const truncated: Content[] = [];
+  for (let i = chatHistory.length - 1; i >= 0; i--) {
+    const text = chatHistory[i].parts
+      .map((p) => ("text" in p && p.text ? p.text : ""))
+      .join("");
+    const msgTokens = estimateTokenCount(text) + 4;
+    if (tokenCount + msgTokens > maxHistoryTokens && truncated.length > 0) break;
+    tokenCount += msgTokens;
+    truncated.unshift(chatHistory[i]);
+  }
+  if (truncated.length < chatHistory.length) {
+    console.log(
+      `[context] Chat history truncated: ${chatHistory.length} → ${truncated.length} messages`
+    );
+  }
+  chatHistory = truncated;
 
   if (fileParts.length > 0) {
     chatHistory = [
