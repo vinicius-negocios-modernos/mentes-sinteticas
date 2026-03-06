@@ -1,5 +1,6 @@
 
 import { GoogleGenerativeAI, type Content } from "@google/generative-ai";
+import { eq } from "drizzle-orm";
 import { promises as fsp } from "fs";
 import path from "path";
 import type { MindData, Manifest, GeminiHistoryEntry } from "@/lib/types";
@@ -17,6 +18,7 @@ function getGenAI(): GoogleGenerativeAI {
 
 const MANIFEST_PATH = path.join(process.cwd(), "data", "minds_manifest.json");
 
+// ── Manifest-based file URI reading (legacy fallback) ───────────────
 async function readManifest(): Promise<Manifest | null> {
     try {
         const data = await fsp.readFile(MANIFEST_PATH, "utf-8");
@@ -38,16 +40,102 @@ export async function getAvailableMinds(): Promise<string[]> {
     return Object.keys(manifest.minds);
 }
 
-export async function createMindChat(mindName: string, history: GeminiHistoryEntry[] = []) {
-    const mindData = await getMindManifest(mindName);
+// ── DB-based file URI reading (primary) ─────────────────────────────
+interface FileUriEntry {
+    fileUri: string;
+    mimeType: string | null;
+}
 
-    if (!mindData) {
-        throw new Error(`Mind '${mindName}' not found in manifest.`);
+/**
+ * Retrieve file URIs for a mind from the database (file_uri_cache).
+ * Returns null if DB is unavailable or mind not found — caller should
+ * fall back to manifest.
+ */
+async function getFileUrisFromDb(mindName: string): Promise<FileUriEntry[] | null> {
+    try {
+        // Dynamic import to avoid breaking build when DATABASE_URL is not set
+        const { getDb } = await import("@/db");
+        const { minds } = await import("@/db/schema/minds");
+        const { knowledgeDocuments } = await import("@/db/schema/knowledge-documents");
+        const { fileUriCache } = await import("@/db/schema/file-uri-cache");
+
+        const db = getDb();
+
+        // Find mind by name
+        const [mind] = await db
+            .select({ id: minds.id })
+            .from(minds)
+            .where(eq(minds.name, mindName))
+            .limit(1);
+
+        if (!mind) return null;
+
+        // Get file URIs via knowledge_documents join
+        const entries = await db
+            .select({
+                fileUri: fileUriCache.fileUri,
+                mimeType: fileUriCache.mimeType,
+            })
+            .from(fileUriCache)
+            .innerJoin(
+                knowledgeDocuments,
+                eq(fileUriCache.knowledgeDocumentId, knowledgeDocuments.id)
+            )
+            .where(eq(knowledgeDocuments.mindId, mind.id));
+
+        if (entries.length === 0) return null;
+
+        return entries;
+    } catch {
+        // DB unavailable — graceful degradation
+        return null;
+    }
+}
+
+/**
+ * Get file parts (URI + mimeType) for a mind, trying DB first then manifest.
+ */
+async function getFileParts(
+    mindName: string
+): Promise<{ fileData: { mimeType: string; fileUri: string } }[]> {
+    // Try DB first
+    const dbEntries = await getFileUrisFromDb(mindName);
+    if (dbEntries && dbEntries.length > 0) {
+        return dbEntries.map((e) => ({
+            fileData: {
+                mimeType: e.mimeType || "text/plain",
+                fileUri: e.fileUri,
+            },
+        }));
+    }
+
+    // Fall back to manifest
+    const mindData = await getMindManifest(mindName);
+    if (!mindData) return [];
+
+    return mindData.files.map((f) => ({
+        fileData: {
+            mimeType: f.mimeType,
+            fileUri: f.uri,
+        },
+    }));
+}
+
+export async function createMindChat(mindName: string, history: GeminiHistoryEntry[] = []) {
+    // Verify mind exists (via manifest or DB)
+    const fileParts = await getFileParts(mindName);
+
+    if (fileParts.length === 0) {
+        // Check if mind exists at all in manifest for error message
+        const mindData = await getMindManifest(mindName);
+        if (!mindData) {
+            throw new Error(`Mind '${mindName}' not found in manifest.`);
+        }
     }
 
     const config = getConfig();
 
-    // Create the model with the system instruction and tools/files
+    // Create the model with the system instruction
     const model = getGenAI().getGenerativeModel({
         model: config.GEMINI_MODEL,
         systemInstruction: `You are the digital clone of ${mindName}.
@@ -63,23 +151,6 @@ export async function createMindChat(mindName: string, history: GeminiHistoryEnt
         topP: config.GEMINI_TOP_P,
         maxOutputTokens: config.GEMINI_MAX_OUTPUT_TOKENS,
     };
-
-    // Content for the first message (or system initialization)
-    // We need to attach the files to the history or the model initialization?
-    // In the new API, we can't just pass file URIs to 'getGenerativeModel' directly in all SDK versions efficiently as 'tools', 
-    // but we can pass them in the 'generateContent' or 'startChat' history.
-    // The persistent way is using 'cachedContent' but let's stick to passing URIs in history for now as it's simpler for distinct sessions.
-    // Actually, for a chat, we put the file parts in the 'history' of the chat.
-
-    const fileParts = mindData.files.map(f => ({
-        fileData: {
-            mimeType: f.mimeType,
-            fileUri: f.uri
-        }
-    }));
-
-    // We add the files to the first history turn if it's empty, or assume they are "context".
-    // A better pattern for long context chat is to have a "system" turn with files, but Gemini usually treats files as User parts.
 
     let chatHistory: Content[] = history.map(h => ({
         role: h.role,

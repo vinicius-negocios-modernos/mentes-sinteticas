@@ -95,7 +95,7 @@ async function seed() {
       console.log(`  Inserted mind (id: ${mindId}).`);
     }
 
-    // Insert knowledge documents + file URI cache
+    // Insert knowledge documents + file URI cache (idempotent)
     for (const file of mindData.files) {
       // Check if document already exists for this mind
       const existingDocs = await db
@@ -109,30 +109,55 @@ async function seed() {
         )
         .limit(1);
 
+      let docId: string;
+
       if (existingDocs.length > 0) {
-        console.log(`  Doc "${file.displayName}" already exists. Skipping.`);
-        continue;
+        docId = existingDocs[0].id;
+        console.log(`  Doc "${file.displayName}" already exists (id: ${docId}).`);
+      } else {
+        const [doc] = await db
+          .insert(knowledgeDocuments)
+          .values({
+            mindId,
+            displayName: file.displayName,
+            localPath: file.localPath,
+            description: null,
+          })
+          .returning({ id: knowledgeDocuments.id });
+
+        docId = doc.id;
+        console.log(`  Inserted doc "${file.displayName}" (id: ${docId}).`);
       }
 
-      const [doc] = await db
-        .insert(knowledgeDocuments)
-        .values({
-          mindId,
-          displayName: file.displayName,
-          localPath: file.localPath,
-          description: null,
-        })
-        .returning({ id: knowledgeDocuments.id });
+      // Upsert file URI cache entry — update if exists, insert if not
+      const existingCache = await db
+        .select()
+        .from(fileUriCache)
+        .where(eq(fileUriCache.knowledgeDocumentId, docId))
+        .limit(1);
 
-      // Insert file URI cache entry
-      await db.insert(fileUriCache).values({
-        knowledgeDocumentId: doc.id,
-        fileUri: file.uri,
-        mimeType: file.mimeType,
-        expiresAt: file.expires_at ? new Date(file.expires_at) : null,
-      });
+      if (existingCache.length > 0) {
+        await db
+          .update(fileUriCache)
+          .set({
+            fileUri: file.uri,
+            mimeType: file.mimeType,
+            expiresAt: file.expires_at ? new Date(file.expires_at) : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(fileUriCache.knowledgeDocumentId, docId));
 
-      console.log(`  Inserted doc "${file.displayName}" + URI cache.`);
+        console.log(`  Updated URI cache for "${file.displayName}".`);
+      } else {
+        await db.insert(fileUriCache).values({
+          knowledgeDocumentId: docId,
+          fileUri: file.uri,
+          mimeType: file.mimeType,
+          expiresAt: file.expires_at ? new Date(file.expires_at) : null,
+        });
+
+        console.log(`  Inserted URI cache for "${file.displayName}".`);
+      }
     }
   }
 

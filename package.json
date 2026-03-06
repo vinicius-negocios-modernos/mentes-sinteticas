@@ -11,7 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx scripts/seed-db.ts"
+    "db:seed": "tsx scripts/seed-db.ts",
+    "refresh-uris": "npx tsx scripts/refresh-file-uris.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
