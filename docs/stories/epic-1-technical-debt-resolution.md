@@ -57,7 +57,7 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 - [x] Story 2.7: Security Headers + Health Check + Prompt Security Hardening
 
 ### Fase 3: Core UX + Chat Experience
-- [ ] Story 3.1: Design System (shadcn/ui + Design Tokens + Tailwind Config)
+- [x] Story 3.1: Design System (shadcn/ui + Design Tokens + Tailwind Config)
 - [ ] Story 3.2: Extracao de Componentes Reusaveis (Base + Chat)
 - [ ] Story 3.3: Refactor gemini.ts em Modulos + Streaming com Vercel AI SDK
 - [ ] Story 3.4: Error Boundaries + Error Handling Strategy
