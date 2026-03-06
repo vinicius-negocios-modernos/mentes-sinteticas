@@ -50,7 +50,7 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 ### Fase 2: Fundacao de Dados
 - [x] Story 2.1: Setup Supabase + Schema Inicial + Drizzle ORM
 - [x] Story 2.2: Autenticacao com Supabase Auth + Middleware
-- [ ] Story 2.3: Persistencia de Conversas (CRUD + RLS)
+- [x] Story 2.3: Persistencia de Conversas (CRUD + RLS)
 - [ ] Story 2.4: File URI Auto-Renewal (Edge Function Cron)
 - [ ] Story 2.5: Knowledge Base Backup + Migracao Manifest para DB
 - [ ] Story 2.6: Rate Limiting Persistente + Input Validation com Zod
