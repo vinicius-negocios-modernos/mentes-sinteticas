@@ -1,7 +1,8 @@
 "use client";
 
+import { useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
@@ -23,22 +24,46 @@ export default function ChatInput({
   helperText,
   className,
 }: ChatInputProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    // Reset to auto to allow shrink
+    textarea.style.height = "auto";
+    // Set to scrollHeight but cap at ~6 lines (~150px)
+    const newHeight = Math.min(textarea.scrollHeight, 150);
+    textarea.style.height = `${newHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value, adjustHeight]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSend();
+    }
+  };
+
   return (
     <div className={cn("p-4 border-t border-white/5 bg-black/20 backdrop-blur-md", className)}>
-      <div className="flex gap-2 relative">
-        <Input
-          type="text"
+      <div className="flex gap-2 items-end">
+        <Textarea
+          ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSend()}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full bg-black/30 border-white/10 rounded-xl px-4 py-4 h-auto focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50 text-white placeholder-gray-500"
+          rows={1}
+          className="flex-1 min-h-[44px] max-h-[150px] resize-none overflow-y-auto bg-black/30 border-white/10 rounded-xl px-4 py-3 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50 text-white placeholder-gray-500 field-sizing-fixed"
         />
         <Button
           onClick={onSend}
-          disabled={disabled}
-          className="absolute right-2 top-2 bottom-2 px-6 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-medium h-auto"
+          disabled={disabled || !value.trim()}
+          className="px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-medium h-[44px] shrink-0 disabled:opacity-40"
         >
           Enviar
         </Button>

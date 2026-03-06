@@ -1,4 +1,5 @@
 import { getMinds, getConversations, getConversationMessages } from "@/app/actions";
+import { getMindByName } from "@/lib/services/minds";
 import ChatHeader from "@/components/chat/chat-header";
 import ChatInterface from "@/components/chat/chat-interface";
 import ConversationList from "@/components/chat/conversation-list";
@@ -32,6 +33,10 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
     );
   }
 
+  // Load mind details for description
+  const mindData = await getMindByName(decodedName).catch(() => null);
+  const mindDescription = mindData?.title ?? undefined;
+
   // Load conversation list for sidebar
   const conversations = await getConversations(decodedName);
 
@@ -53,7 +58,7 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
 
   return (
     <div className="min-h-screen p-4 sm:p-8 font-[family-name:var(--font-geist-sans)] flex flex-col">
-      <ChatHeader mindName={decodedName} backHref="/" />
+      <ChatHeader mindName={decodedName} mindDescription={mindDescription} backHref="/" />
 
       <main className="flex-1 w-full flex gap-4">
         {/* Conversation Sidebar */}
@@ -87,6 +92,7 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
         <div className="flex-1 min-w-0">
           <ChatInterface
             mindName={decodedName}
+            mindDescription={mindDescription}
             initialMessages={initialMessages}
             initialConversationId={activeConversationId}
           />

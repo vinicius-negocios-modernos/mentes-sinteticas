@@ -19,6 +19,7 @@ export interface Manifest {
 export interface ChatMessage {
     role: "user" | "model";
     text: string;
+    timestamp?: Date;
 }
 
 export interface GeminiHistoryEntry {
