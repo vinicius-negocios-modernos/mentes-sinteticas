@@ -1,4 +1,5 @@
 {
+  "_DEPRECATED": "This file is DEPRECATED as of Story 2.5. The database (Supabase) is now the primary source of truth for minds and knowledge documents. This file is retained as a read-only backup and fallback. Do NOT add new data here — use the DB seed script instead. Scheduled for removal in Story 3.x.",
   "minds": {
     "Antonio Napole": {
       "files": [

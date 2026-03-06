@@ -1,9 +1,9 @@
 
 import Link from "next/link";
-import { getMinds } from "./actions";
+import { getMindsList } from "./actions";
 
 export default async function Home() {
-  const minds = await getMinds();
+  const minds = await getMindsList();
 
   return (
     <div className="min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)]">

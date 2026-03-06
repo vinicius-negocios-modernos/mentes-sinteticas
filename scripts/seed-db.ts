@@ -115,12 +115,18 @@ async function seed() {
         docId = existingDocs[0].id;
         console.log(`  Doc "${file.displayName}" already exists (id: ${docId}).`);
       } else {
+        // Derive storage_path from localPath: knowledge-base/{localPath}
+        const storagePath = file.localPath
+          ? `knowledge-base/${file.localPath}`
+          : null;
+
         const [doc] = await db
           .insert(knowledgeDocuments)
           .values({
             mindId,
             displayName: file.displayName,
             localPath: file.localPath,
+            storagePath,
             description: null,
           })
           .returning({ id: knowledgeDocuments.id });

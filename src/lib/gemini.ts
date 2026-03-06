@@ -40,6 +40,34 @@ export async function getAvailableMinds(): Promise<string[]> {
     return Object.keys(manifest.minds);
 }
 
+// ── DB-based mind lookup (primary) ───────────────────────────────────
+interface DbMindInfo {
+    id: string;
+    name: string;
+}
+
+/**
+ * Look up a mind by name in the database.
+ * Returns null if DB unavailable or mind not found.
+ */
+async function getMindFromDb(mindName: string): Promise<DbMindInfo | null> {
+    try {
+        const { getDb } = await import("@/db");
+        const { minds } = await import("@/db/schema/minds");
+
+        const db = getDb();
+        const [mind] = await db
+            .select({ id: minds.id, name: minds.name })
+            .from(minds)
+            .where(eq(minds.name, mindName))
+            .limit(1);
+
+        return mind ?? null;
+    } catch {
+        return null;
+    }
+}
+
 // ── DB-based file URI reading (primary) ─────────────────────────────
 interface FileUriEntry {
     fileUri: string;
@@ -122,14 +150,17 @@ async function getFileParts(
 }
 
 export async function createMindChat(mindName: string, history: GeminiHistoryEntry[] = []) {
-    // Verify mind exists (via manifest or DB)
+    // Verify mind exists (DB primary, manifest fallback)
     const fileParts = await getFileParts(mindName);
 
     if (fileParts.length === 0) {
-        // Check if mind exists at all in manifest for error message
-        const mindData = await getMindManifest(mindName);
-        if (!mindData) {
-            throw new Error(`Mind '${mindName}' not found in manifest.`);
+        // Check DB first, then manifest
+        const dbMind = await getMindFromDb(mindName);
+        if (!dbMind) {
+            const mindData = await getMindManifest(mindName);
+            if (!mindData) {
+                throw new Error(`Mind '${mindName}' not found.`);
+            }
         }
     }
 

@@ -8,6 +8,7 @@ export const knowledgeDocuments = pgTable("knowledge_documents", {
     .references(() => minds.id, { onDelete: "cascade" }),
   displayName: varchar("display_name", { length: 500 }).notNull(),
   localPath: text("local_path"),
+  storagePath: text("storage_path"),
   description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()

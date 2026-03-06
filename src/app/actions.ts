@@ -1,10 +1,8 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { createMindChat, getAvailableMinds } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase/server";
-import { db } from "@/db";
-import { minds } from "@/db/schema";
+import { listActiveMindNames, getMindByName } from "@/lib/services/minds";
 import {
   createConversation,
   getConversationById,
@@ -23,8 +21,25 @@ import type {
 } from "@/lib/types";
 import type { Conversation, Message } from "@/db/schema";
 
-export async function getMinds() {
+/**
+ * Get list of available mind names.
+ * DB primary, manifest fallback for graceful degradation.
+ */
+export async function getMinds(): Promise<string[]> {
+  try {
+    const dbMinds = await listActiveMindNames();
+    if (dbMinds.length > 0) return dbMinds;
+  } catch {
+    // DB unavailable — fall through to manifest
+  }
   return await getAvailableMinds();
+}
+
+/**
+ * Alias used by page.tsx for clarity.
+ */
+export async function getMindsList(): Promise<string[]> {
+  return getMinds();
 }
 
 function classifyError(error: unknown): { message: string; type: ErrorType } {
@@ -36,7 +51,7 @@ function classifyError(error: unknown): { message: string; type: ErrorType } {
       type: "API_KEY_MISSING",
     };
   }
-  if (msg.includes("not found in manifest")) {
+  if (msg.includes("not found in manifest") || msg.includes("not found")) {
     return {
       message: "Esta mente nao foi encontrada no sistema.",
       type: "MIND_NOT_FOUND",
@@ -60,12 +75,12 @@ function classifyError(error: unknown): { message: string; type: ErrorType } {
  * Returns null if not found in DB (graceful fallback).
  */
 async function getMindIdByName(mindName: string): Promise<string | null> {
-  const [mind] = await db
-    .select({ id: minds.id })
-    .from(minds)
-    .where(eq(minds.name, mindName))
-    .limit(1);
-  return mind?.id ?? null;
+  try {
+    const mind = await getMindByName(mindName);
+    return mind?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
