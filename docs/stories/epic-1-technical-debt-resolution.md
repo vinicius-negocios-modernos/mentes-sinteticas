@@ -53,7 +53,7 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 - [x] Story 2.3: Persistencia de Conversas (CRUD + RLS)
 - [x] Story 2.4: File URI Auto-Renewal (Edge Function Cron)
 - [x] Story 2.5: Knowledge Base Backup + Migracao Manifest para DB
-- [ ] Story 2.6: Rate Limiting Persistente + Input Validation com Zod
+- [x] Story 2.6: Rate Limiting Persistente + Input Validation com Zod
 - [ ] Story 2.7: Security Headers + Health Check + Prompt Security Hardening
 
 ### Fase 3: Core UX + Chat Experience
