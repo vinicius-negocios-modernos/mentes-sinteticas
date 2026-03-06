@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { promises as fsp } from "fs";
 import path from "path";
 import type { MindData, Manifest } from "@/lib/types";
+import { ManifestSchema } from "@/lib/validations/manifest";
 
 const MANIFEST_PATH = path.join(process.cwd(), "data", "minds_manifest.json");
 
@@ -10,7 +11,13 @@ const MANIFEST_PATH = path.join(process.cwd(), "data", "minds_manifest.json");
 async function readManifest(): Promise<Manifest | null> {
   try {
     const data = await fsp.readFile(MANIFEST_PATH, "utf-8");
-    return JSON.parse(data) as Manifest;
+    const parsed: unknown = JSON.parse(data);
+    const result = ManifestSchema.safeParse(parsed);
+    if (!result.success) {
+      console.warn("Manifest validation failed:", result.error.issues);
+      return null;
+    }
+    return result.data;
   } catch {
     return null;
   }

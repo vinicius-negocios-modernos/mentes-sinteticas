@@ -225,11 +225,12 @@ export default function ChatInterface({
         );
 
         if (fallbackResponse.success && fallbackResponse.text) {
+          const responseText = fallbackResponse.text;
           setMessages((prev) => [
             ...prev,
             {
               role: "model",
-              text: fallbackResponse.text as string,
+              text: responseText,
               timestamp: new Date(),
             },
           ]);

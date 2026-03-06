@@ -1,7 +1,7 @@
 import type { Content } from "@google/generative-ai";
 import type { GeminiHistoryEntry } from "@/lib/types";
-import { getConfig } from "@/lib/config";
 import { getGenAI } from "./client";
+import { getAIConfig } from "./config";
 import { buildSystemPrompt } from "./prompts";
 import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
 
@@ -23,18 +23,18 @@ export async function createMindChat(mindName: string, history: GeminiHistoryEnt
     }
   }
 
-  const config = getConfig();
+  const aiConfig = getAIConfig();
 
   const model = getGenAI().getGenerativeModel({
-    model: config.GEMINI_MODEL,
+    model: aiConfig.model,
     systemInstruction: buildSystemPrompt(mindName),
   });
 
   const generationConfig = {
-    temperature: config.GEMINI_TEMPERATURE,
-    topK: config.GEMINI_TOP_K,
-    topP: config.GEMINI_TOP_P,
-    maxOutputTokens: config.GEMINI_MAX_OUTPUT_TOKENS,
+    temperature: aiConfig.temperature,
+    topK: aiConfig.topK,
+    topP: aiConfig.topP,
+    maxOutputTokens: aiConfig.maxOutputTokens,
   };
 
   let chatHistory: Content[] = history.map((h) => ({

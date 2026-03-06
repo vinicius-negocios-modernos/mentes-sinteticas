@@ -15,8 +15,11 @@ export default async function LoginPage({
     async function signIn(formData: FormData) {
         "use server";
 
-        const email = formData.get("email") as string;
-        const password = formData.get("password") as string;
+        const email = formData.get("email");
+        const password = formData.get("password");
+        if (!email || typeof email !== "string" || !password || typeof password !== "string") {
+            redirect(`/login?error=${encodeURIComponent("Email e senha sao obrigatorios.")}&redirectTo=${encodeURIComponent(redirectTo || "/")}`);
+        }
 
         const supabase = await createClient();
         const { error } = await supabase.auth.signInWithPassword({

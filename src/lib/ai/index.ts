@@ -1,6 +1,10 @@
 // ── Public API for AI module ────────────────────────────────────────
 // Barrel export for all AI-related functionality.
 
+// AI Config
+export { getAIConfig, AI_PRESETS } from "./config";
+export type { AIModelConfig } from "./config";
+
 // Client
 export { getGenAI, getGoogleProvider } from "./client";
 

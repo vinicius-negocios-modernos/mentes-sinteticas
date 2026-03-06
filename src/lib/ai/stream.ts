@@ -1,7 +1,7 @@
 import { streamText } from "ai";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
-import { getConfig } from "@/lib/config";
 import { getGoogleProvider } from "./client";
+import { getAIConfig } from "./config";
 import { buildSystemPrompt, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
 import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
 
@@ -90,19 +90,19 @@ export async function streamMindChat({
     }
   }
 
-  const config = getConfig();
+  const aiConfig = getAIConfig();
   const google = getGoogleProvider();
 
   const messages = await buildStreamMessages(mindName, userMessage, history);
 
   const result = streamText({
-    model: google(config.GEMINI_MODEL),
+    model: google(aiConfig.model),
     system: buildSystemPrompt(mindName),
     messages,
-    temperature: config.GEMINI_TEMPERATURE,
-    topK: config.GEMINI_TOP_K,
-    topP: config.GEMINI_TOP_P,
-    maxOutputTokens: config.GEMINI_MAX_OUTPUT_TOKENS,
+    temperature: aiConfig.temperature,
+    topK: aiConfig.topK,
+    topP: aiConfig.topP,
+    maxOutputTokens: aiConfig.maxOutputTokens,
     onFinish: onFinish
       ? async ({ text }) => {
           await onFinish({ text });
