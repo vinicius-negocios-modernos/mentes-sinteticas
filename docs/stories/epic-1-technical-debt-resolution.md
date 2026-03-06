@@ -66,7 +66,7 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 - [x] Story 3.7: Context Window Optimization (Cached Content API)
 
 ### Fase 4: Qualidade + Mobile + Acessibilidade
-- [ ] Story 4.1: Setup Test Framework (Vitest + RTL + Playwright) + Unit Tests
+- [x] Story 4.1: Setup Test Framework (Vitest + RTL + Playwright) + Unit Tests
 - [ ] Story 4.2: Integration Tests (API, RLS, DB) + E2E Tests
 - [ ] Story 4.3: CI/CD Pipeline (GitHub Actions + Vercel)
 - [ ] Story 4.4: Monitoring e Observabilidade (Sentry + Structured Logging + Analytics)
