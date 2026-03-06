@@ -63,7 +63,7 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 - [x] Story 3.4: Error Boundaries + Error Handling Strategy
 - [x] Story 3.5: Chat UX Redesign (Textarea, Avatares, Header, Actions, Scroll)
 - [x] Story 3.6: Type Safety + Model Config Externalization
-- [ ] Story 3.7: Context Window Optimization (Cached Content API)
+- [x] Story 3.7: Context Window Optimization (Cached Content API)
 
 ### Fase 4: Qualidade + Mobile + Acessibilidade
 - [ ] Story 4.1: Setup Test Framework (Vitest + RTL + Playwright) + Unit Tests
