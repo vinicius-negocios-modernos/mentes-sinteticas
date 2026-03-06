@@ -1,11 +1,38 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { sendMessage } from "@/app/actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ChatMessage, { ChatMessageLoading } from "@/components/chat/chat-message";
 import ChatInput from "@/components/chat/chat-input";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { classifyError, type AppError } from "@/lib/errors";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
+
+// ---------------------------------------------------------------------------
+// Toast helper — shows classified errors via Sonner
+// ---------------------------------------------------------------------------
+
+function showErrorToast(appError: AppError, onRetry?: () => void) {
+  const duration = appError.severity === "warning" ? 3000 : 5000;
+
+  if (appError.severity === "warning") {
+    toast.warning(appError.userMessage, {
+      duration,
+      ...(appError.recoverable && onRetry
+        ? { action: { label: appError.action, onClick: onRetry } }
+        : {}),
+    });
+  } else {
+    toast.error(appError.userMessage, {
+      duration,
+      ...(appError.recoverable && onRetry
+        ? { action: { label: appError.action, onClick: onRetry } }
+        : {}),
+    });
+  }
+}
 
 interface ChatInterfaceProps {
   mindName: string;
@@ -119,40 +146,48 @@ export default function ChatInterface({
       }
     } catch (error) {
       setStreamingText(null);
+      const classified = classifyError(error);
 
       // Fall back to non-streaming server action
-      const startIdx = initialMessages ? 0 : 1;
-      const historyForApi = messages.slice(startIdx).map((m) => ({
-        role: m.role,
-        parts: [{ text: m.text }],
-      }));
+      try {
+        const startIdx = initialMessages ? 0 : 1;
+        const historyForApi = messages.slice(startIdx).map((m) => ({
+          role: m.role,
+          parts: [{ text: m.text }],
+        }));
 
-      const fallbackResponse = await sendMessage(
-        mindName,
-        currentInput,
-        historyForApi,
-        conversationId
-      );
+        const fallbackResponse = await sendMessage(
+          mindName,
+          currentInput,
+          historyForApi,
+          conversationId
+        );
 
-      if (fallbackResponse.success && fallbackResponse.text) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "model", text: fallbackResponse.text as string },
-        ]);
-        if (fallbackResponse.conversationId && !conversationId) {
-          setConversationId(fallbackResponse.conversationId);
-          const url = new URL(window.location.href);
-          url.searchParams.set("conversation", fallbackResponse.conversationId);
-          window.history.replaceState({}, "", url.toString());
+        if (fallbackResponse.success && fallbackResponse.text) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "model", text: fallbackResponse.text as string },
+          ]);
+          if (fallbackResponse.conversationId && !conversationId) {
+            setConversationId(fallbackResponse.conversationId);
+            const url = new URL(window.location.href);
+            url.searchParams.set("conversation", fallbackResponse.conversationId);
+            window.history.replaceState({}, "", url.toString());
+          }
+          return; // Fallback succeeded — no need to show error
         }
-      } else {
-        const errorMsg =
-          error instanceof Error ? error.message : "Erro desconhecido.";
-        setMessages((prev) => [
-          ...prev,
-          { role: "model", text: `*${errorMsg}*` },
-        ]);
+      } catch {
+        // Fallback also failed — show toast for the original error
       }
+
+      // Show toast for transient/recoverable errors
+      showErrorToast(classified, classified.recoverable ? handleSend : undefined);
+
+      // Show inline error message in chat
+      setMessages((prev) => [
+        ...prev,
+        { role: "model", text: `*${classified.userMessage}*` },
+      ]);
     }
 
     setIsLoading(false);
@@ -163,33 +198,51 @@ export default function ChatInterface({
   } para responder.`;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl overflow-hidden animate-in fade-in duration-500">
-      {/* Messages Area */}
-      <ScrollArea className="flex-1">
-        <div className="p-6 space-y-6">
-          {messages.map((msg, idx) => (
-            <ChatMessage key={idx} role={msg.role} text={msg.text} />
-          ))}
-          {/* Show streaming text as it arrives */}
-          {streamingText !== null && streamingText.length > 0 && (
-            <ChatMessage role="model" text={streamingText} />
-          )}
-          {/* Show loading indicator when waiting for first token */}
-          {isLoading && (streamingText === null || streamingText.length === 0) && (
-            <ChatMessageLoading />
-          )}
-          <div ref={messagesEndRef} />
+    <ErrorBoundary
+      variant="inline"
+      fallback={({ reset }) => (
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl p-8 text-center">
+          <p className="text-red-400 text-lg mb-2">Erro no chat</p>
+          <p className="text-gray-400 text-sm mb-4">
+            Ocorreu um erro na interface de chat. Tente reconectar.
+          </p>
+          <button
+            onClick={reset}
+            className="px-4 py-2 rounded-lg bg-purple-600/30 border border-purple-500/40 text-purple-200 hover:bg-purple-600/50 transition-colors"
+          >
+            Tentar novamente
+          </button>
         </div>
-      </ScrollArea>
+      )}
+    >
+      <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl overflow-hidden animate-in fade-in duration-500">
+        {/* Messages Area */}
+        <ScrollArea className="flex-1">
+          <div className="p-6 space-y-6">
+            {messages.map((msg, idx) => (
+              <ChatMessage key={idx} role={msg.role} text={msg.text} />
+            ))}
+            {/* Show streaming text as it arrives */}
+            {streamingText !== null && streamingText.length > 0 && (
+              <ChatMessage role="model" text={streamingText} />
+            )}
+            {/* Show loading indicator when waiting for first token */}
+            {isLoading && (streamingText === null || streamingText.length === 0) && (
+              <ChatMessageLoading />
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
 
-      {/* Input Area */}
-      <ChatInput
-        value={input}
-        onChange={setInput}
-        onSend={handleSend}
-        disabled={isLoading}
-        helperText={helperText}
-      />
-    </div>
+        {/* Input Area */}
+        <ChatInput
+          value={input}
+          onChange={setInput}
+          onSend={handleSend}
+          disabled={isLoading}
+          helperText={helperText}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }

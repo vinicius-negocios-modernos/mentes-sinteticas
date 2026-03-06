@@ -2,6 +2,7 @@ import { getMinds, getConversations, getConversationMessages } from "@/app/actio
 import ChatHeader from "@/components/chat/chat-header";
 import ChatInterface from "@/components/chat/chat-interface";
 import ConversationList from "@/components/chat/conversation-list";
+import { ErrorBoundary } from "@/components/error-boundary";
 import type { ChatMessage } from "@/lib/types";
 import Link from "next/link";
 
@@ -60,11 +61,26 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
           <h2 className="text-sm font-semibold text-gray-400 mb-3 px-1">
             Conversas
           </h2>
-          <ConversationList
-            conversations={conversations}
-            mindId={decodedName}
-            activeConversationId={activeConversationId}
-          />
+          <ErrorBoundary
+            variant="inline"
+            fallback={({ reset }) => (
+              <div className="text-center p-4">
+                <p className="text-sm text-red-400 mb-2">Erro ao carregar conversas</p>
+                <button
+                  onClick={reset}
+                  className="text-xs text-purple-400 hover:underline"
+                >
+                  Recarregar
+                </button>
+              </div>
+            )}
+          >
+            <ConversationList
+              conversations={conversations}
+              mindId={decodedName}
+              activeConversationId={activeConversationId}
+            />
+          </ErrorBoundary>
         </aside>
 
         {/* Chat Area */}
