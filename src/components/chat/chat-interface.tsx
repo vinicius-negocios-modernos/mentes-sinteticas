@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { sendMessage } from "@/app/actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ChatMessage, { ChatMessageLoading } from "@/components/chat/chat-message";
@@ -31,58 +31,128 @@ export default function ChatInterface({
   const [conversationId, setConversationId] = useState<string | undefined>(
     initialConversationId
   );
+  const [streamingText, setStreamingText] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, streamingText, scrollToBottom]);
 
+  /**
+   * Send message via streaming API route.
+   * Falls back to non-streaming server action on error.
+   */
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
     const userMsg: ChatMessageType = { role: "user", text: input };
     setMessages((prev) => [...prev, userMsg]);
+    const currentInput = input;
     setInput("");
     setIsLoading(true);
+    setStreamingText("");
 
-    // Prepare history for API (exclude greeting / initial messages for Gemini format)
-    // Filter: skip the first message (greeting) from history sent to Gemini
-    const startIdx = initialMessages ? 0 : 1;
-    const historyForApi = messages.slice(startIdx).map((m) => ({
-      role: m.role,
-      parts: [{ text: m.text }],
-    }));
+    try {
+      // Build history for the API (exclude greeting for new conversations)
+      const startIdx = initialMessages ? 0 : 1;
+      const historyForApi = messages.slice(startIdx).map((m) => ({
+        role: m.role === "model" ? "assistant" : "user",
+        content: m.text,
+      }));
 
-    const response = await sendMessage(
-      mindName,
-      userMsg.text,
-      historyForApi,
-      conversationId
-    );
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mindName,
+          message: currentInput,
+          history: historyForApi,
+          conversationId,
+        }),
+      });
 
-    if (response.success && response.text) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "model", text: response.text as string },
-      ]);
-      // Store conversationId from first response
-      if (response.conversationId && !conversationId) {
-        setConversationId(response.conversationId);
-        // Update URL without full navigation so user can bookmark/reload
+      if (!response.ok) {
+        // Try to parse error JSON, fall back to non-streaming
+        const errorData = await response.json().catch(() => null);
+        const errorMsg = errorData?.error || "Erro ao processar mensagem.";
+        throw new Error(errorMsg);
+      }
+
+      // Capture conversationId from header
+      const newConversationId = response.headers.get("X-Conversation-Id");
+      if (newConversationId && !conversationId) {
+        setConversationId(newConversationId);
         const url = new URL(window.location.href);
-        url.searchParams.set("conversation", response.conversationId);
+        url.searchParams.set("conversation", newConversationId);
         window.history.replaceState({}, "", url.toString());
       }
-    } else {
-      const errorMsg = response.error || "Erro desconhecido. Tente novamente.";
-      setMessages((prev) => [
-        ...prev,
-        { role: "model", text: `*${errorMsg}*` },
-      ]);
+
+      // Read streaming response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Stream not available");
+      }
+
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        accumulated += chunk;
+        setStreamingText(accumulated);
+      }
+
+      // Stream complete — add final message
+      setStreamingText(null);
+      if (accumulated) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "model", text: accumulated },
+        ]);
+      }
+    } catch (error) {
+      setStreamingText(null);
+
+      // Fall back to non-streaming server action
+      const startIdx = initialMessages ? 0 : 1;
+      const historyForApi = messages.slice(startIdx).map((m) => ({
+        role: m.role,
+        parts: [{ text: m.text }],
+      }));
+
+      const fallbackResponse = await sendMessage(
+        mindName,
+        currentInput,
+        historyForApi,
+        conversationId
+      );
+
+      if (fallbackResponse.success && fallbackResponse.text) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "model", text: fallbackResponse.text as string },
+        ]);
+        if (fallbackResponse.conversationId && !conversationId) {
+          setConversationId(fallbackResponse.conversationId);
+          const url = new URL(window.location.href);
+          url.searchParams.set("conversation", fallbackResponse.conversationId);
+          window.history.replaceState({}, "", url.toString());
+        }
+      } else {
+        const errorMsg =
+          error instanceof Error ? error.message : "Erro desconhecido.";
+        setMessages((prev) => [
+          ...prev,
+          { role: "model", text: `*${errorMsg}*` },
+        ]);
+      }
     }
 
     setIsLoading(false);
@@ -100,7 +170,14 @@ export default function ChatInterface({
           {messages.map((msg, idx) => (
             <ChatMessage key={idx} role={msg.role} text={msg.text} />
           ))}
-          {isLoading && <ChatMessageLoading />}
+          {/* Show streaming text as it arrives */}
+          {streamingText !== null && streamingText.length > 0 && (
+            <ChatMessage role="model" text={streamingText} />
+          )}
+          {/* Show loading indicator when waiting for first token */}
+          {isLoading && (streamingText === null || streamingText.length === 0) && (
+            <ChatMessageLoading />
+          )}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>

@@ -1,0 +1,114 @@
+import { streamText } from "ai";
+import type { ModelMessage } from "@ai-sdk/provider-utils";
+import { getConfig } from "@/lib/config";
+import { getGoogleProvider } from "./client";
+import { buildSystemPrompt, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
+import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
+
+/**
+ * Build the message array for streaming, including knowledge context injection.
+ * Converts file URIs into user/assistant priming messages for the Vercel AI SDK format.
+ */
+async function buildStreamMessages(
+  mindName: string,
+  userMessage: string,
+  history: ModelMessage[]
+): Promise<ModelMessage[]> {
+  const fileParts = await getFileParts(mindName);
+  const messages: ModelMessage[] = [];
+
+  // Inject knowledge base as priming messages
+  if (fileParts.length > 0) {
+    // Build content parts with file data references + priming text
+    const userParts: Array<
+      | { type: "text"; text: string }
+      | { type: "file"; data: URL; mediaType: string }
+    > = [];
+
+    for (const fp of fileParts) {
+      userParts.push({
+        type: "file" as const,
+        data: new URL(fp.fileData.fileUri),
+        mediaType: fp.fileData.mimeType,
+      });
+    }
+
+    userParts.push({
+      type: "text" as const,
+      text: buildKnowledgePrimingMessage(),
+    });
+
+    messages.push({
+      role: "user",
+      content: userParts,
+    });
+
+    messages.push({
+      role: "assistant",
+      content: buildKnowledgePrimingResponse(mindName),
+    });
+  }
+
+  // Add conversation history
+  messages.push(...history);
+
+  // Add current user message
+  messages.push({
+    role: "user",
+    content: userMessage,
+  });
+
+  return messages;
+}
+
+export interface StreamMindChatOptions {
+  mindName: string;
+  userMessage: string;
+  history?: ModelMessage[];
+  onFinish?: (result: { text: string }) => void | Promise<void>;
+}
+
+/**
+ * Stream a response from a mind using Vercel AI SDK.
+ * Returns a streamText result that can be converted to a streaming response.
+ */
+export async function streamMindChat({
+  mindName,
+  userMessage,
+  history = [],
+  onFinish,
+}: StreamMindChatOptions) {
+  // Verify mind exists
+  const fileParts = await getFileParts(mindName);
+  if (fileParts.length === 0) {
+    const dbMind = await getMindFromDb(mindName);
+    if (!dbMind) {
+      const mindData = await getMindManifest(mindName);
+      if (!mindData) {
+        throw new Error(`Mind '${mindName}' not found.`);
+      }
+    }
+  }
+
+  const config = getConfig();
+  const google = getGoogleProvider();
+
+  const messages = await buildStreamMessages(mindName, userMessage, history);
+
+  const result = streamText({
+    model: google(config.GEMINI_MODEL),
+    system: buildSystemPrompt(mindName),
+    messages,
+    temperature: config.GEMINI_TEMPERATURE,
+    topK: config.GEMINI_TOP_K,
+    topP: config.GEMINI_TOP_P,
+    maxOutputTokens: config.GEMINI_MAX_OUTPUT_TOKENS,
+    onFinish: onFinish
+      ? async ({ text }) => {
+          await onFinish({ text });
+        }
+      : undefined,
+  });
+
+  return result;
+}

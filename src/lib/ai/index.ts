@@ -1,0 +1,24 @@
+// ── Public API for AI module ────────────────────────────────────────
+// Barrel export for all AI-related functionality.
+
+// Client
+export { getGenAI, getGoogleProvider } from "./client";
+
+// Prompts
+export { buildSystemPrompt, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
+
+// Knowledge
+export {
+  getMindManifest,
+  getAvailableMinds,
+  getMindFromDb,
+  getFileUrisFromDb,
+  getFileParts,
+} from "./knowledge";
+
+// Chat (non-streaming, legacy path)
+export { createMindChat } from "./chat";
+
+// Streaming (Vercel AI SDK)
+export { streamMindChat } from "./stream";
+export type { StreamMindChatOptions } from "./stream";

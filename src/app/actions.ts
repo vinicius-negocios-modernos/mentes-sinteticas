@@ -1,6 +1,6 @@
 "use server";
 
-import { createMindChat, getAvailableMinds } from "@/lib/gemini";
+import { createMindChat, getAvailableMinds } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
 import { listActiveMindNames, getMindByName } from "@/lib/services/minds";
 import {
