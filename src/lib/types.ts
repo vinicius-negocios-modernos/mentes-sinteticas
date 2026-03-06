@@ -33,4 +33,5 @@ export interface SendMessageResponse {
     text?: string;
     error?: string;
     errorType?: ErrorType;
+    conversationId?: string;
 }
