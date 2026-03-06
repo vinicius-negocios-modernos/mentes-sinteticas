@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,24 +37,32 @@ export default async function RootLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {user && (
-          <nav className="fixed top-0 right-0 z-50 p-4 flex items-center gap-4">
-            <span className="text-xs text-gray-400 truncate max-w-[200px]">
-              {user.email}
-            </span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
-              >
-                Sair
-              </button>
-            </form>
-          </nav>
-        )}
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {user && (
+            <nav className="fixed top-0 right-0 z-50 p-4 flex items-center gap-4">
+              <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                {user.email}
+              </span>
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+                >
+                  Sair
+                </button>
+              </form>
+            </nav>
+          )}
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

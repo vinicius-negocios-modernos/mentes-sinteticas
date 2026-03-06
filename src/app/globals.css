@@ -1,19 +1,125 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design Tokens — "Dark Academia meets Sci-Fi"
+ * HSL format for shadcn/ui compatibility
+ * Deep indigo base, purple primary, cyan accent
+ */
+
 :root {
-  --background: #030014;
-  --foreground: #ffffff;
-  --card-bg: rgba(255, 255, 255, 0.03);
-  --card-border: rgba(255, 255, 255, 0.1);
-  --primary: #a855f7; /* Purple */
-  --secondary: #3b82f6; /* Blue */
-  --accent: #00f0ff; /* Cyan */
+  --background: 240 20% 98%;
+  --foreground: 240 10% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 10%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 10%;
+
+  --primary: 271 81% 56%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 217 91% 60%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 240 5% 92%;
+  --muted-foreground: 240 5% 45%;
+
+  --accent: 185 100% 50%;
+  --accent-foreground: 240 10% 10%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 240 6% 85%;
+  --input: 240 6% 85%;
+  --ring: 271 81% 56%;
+
+  --radius: 0.75rem;
+
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, 'Cascadia Code', 'Fira Code', monospace;
+
+  /* Legacy tokens (preserved for existing components) */
   --glass: blur(12px);
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+.dark {
+  --background: 260 100% 4%;
+  --foreground: 0 0% 98%;
+
+  --card: 260 30% 8%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 260 30% 8%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 271 81% 65%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 217 91% 60%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 260 20% 15%;
+  --muted-foreground: 240 5% 60%;
+
+  --accent: 185 100% 50%;
+  --accent-foreground: 240 10% 10%;
+
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 260 15% 15%;
+  --input: 260 15% 18%;
+  --ring: 271 81% 65%;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* Base styles */
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+  border-color: hsl(var(--border));
 }
 
 html,
@@ -21,13 +127,13 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   font-family: var(--font-sans);
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
   min-height: 100vh;
 }
 
-body {
-  background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #030014 60%);
+.dark body {
+  background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, hsl(260 100% 4%) 60%);
   background-attachment: fixed;
 }
 
@@ -35,12 +141,12 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
-/* Utilities */
+/* Custom utilities — preserved from original design */
 .glass-panel {
-  background: var(--card-bg);
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: var(--glass);
   -webkit-backdrop-filter: var(--glass);
-  border: 1px solid var(--card-border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
