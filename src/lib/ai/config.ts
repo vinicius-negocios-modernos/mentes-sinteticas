@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+/**
+ * Zod schema for validating and coercing AI model configuration values.
+ * Supports environment variable overrides with safe defaults.
+ */
 export const AIModelConfigSchema = z.object({
   model: z.string().default("gemini-2.0-flash"),
   temperature: z.coerce.number().min(0).max(2).default(0.7),
@@ -10,6 +14,7 @@ export const AIModelConfigSchema = z.object({
 
 export type AIModelConfig = z.infer<typeof AIModelConfigSchema>;
 
+/** Pre-defined generation parameter presets for different conversation styles. */
 export const AI_PRESETS = {
   balanced: {
     temperature: 0.7,
@@ -33,6 +38,7 @@ export const AI_PRESETS = {
 
 // ── Token Budget Limits ──────────────────────────────────────────────
 
+/** Daily and monthly token budget limits per user, configurable via env vars. */
 export const TOKEN_LIMITS = {
   daily: parseInt(process.env.TOKEN_DAILY_LIMIT ?? "500000", 10),
   monthly: parseInt(process.env.TOKEN_MONTHLY_LIMIT ?? "5000000", 10),
@@ -40,6 +46,13 @@ export const TOKEN_LIMITS = {
 
 let _aiConfig: AIModelConfig | null = null;
 
+/**
+ * Get the resolved AI model configuration, merging env vars with preset defaults.
+ * Caches the result after first call.
+ *
+ * @returns Validated AI model configuration
+ * @throws {Error} When environment variables fail Zod validation
+ */
 export function getAIConfig(): AIModelConfig {
   if (!_aiConfig) {
     const presetName = process.env.AI_PRESET as keyof typeof AI_PRESETS | undefined;

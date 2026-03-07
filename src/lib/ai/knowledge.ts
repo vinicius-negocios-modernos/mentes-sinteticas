@@ -24,12 +24,23 @@ async function readManifest(): Promise<Manifest | null> {
   }
 }
 
+/**
+ * Get mind data from the local manifest file (legacy fallback).
+ *
+ * @param mindName - The display name of the mind
+ * @returns Mind data with files array, or null if not found
+ */
 export async function getMindManifest(mindName: string): Promise<MindData | null> {
   const manifest = await readManifest();
   if (!manifest) return null;
   return manifest.minds[mindName] || null;
 }
 
+/**
+ * Get all available mind names from the local manifest (legacy fallback).
+ *
+ * @returns Array of mind names, or empty array if manifest unavailable
+ */
 export async function getAvailableMinds(): Promise<string[]> {
   const manifest = await readManifest();
   if (!manifest) return [];

@@ -62,7 +62,7 @@ async function uploadFile(filePath: string, displayName: string, mimeType: strin
         console.log(`\nState: ${file.state}`);
 
         if (file.state === FileState.FAILED) {
-            throw new Error("Mind file processing failed.");
+            throw new Error(`Gemini file processing failed for "${displayName}" (state: ${file.state}).`);
         }
 
         return file;

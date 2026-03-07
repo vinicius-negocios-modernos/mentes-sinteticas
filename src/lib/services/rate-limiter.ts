@@ -113,6 +113,9 @@ export async function checkRateLimit(
  * Record a request for rate limiting purposes.
  * Inserts one row per request with the current window timestamp.
  * The checkRateLimit function SUMs request_count across all rows in the window.
+ *
+ * @param userId - The authenticated user's UUID
+ * @param action - The action being rate-limited (e.g. "sendMessage")
  */
 export async function incrementRateLimit(
   userId: string,

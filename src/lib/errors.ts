@@ -9,6 +9,7 @@
 // Error Codes
 // ---------------------------------------------------------------------------
 
+/** Enumeration of all application error codes, grouped by category. */
 export enum ErrorCode {
   // Generic
   UNKNOWN = "UNKNOWN",
@@ -38,6 +39,10 @@ export type ErrorSeverity = "error" | "warning" | "info";
 // Base AppError
 // ---------------------------------------------------------------------------
 
+/**
+ * Base application error with structured metadata for user-facing display.
+ * All specialized errors extend this class.
+ */
 export class AppError extends Error {
   readonly code: ErrorCode;
   readonly userMessage: string;
@@ -70,6 +75,7 @@ export class AppError extends Error {
 // Specialised errors
 // ---------------------------------------------------------------------------
 
+/** Network connectivity or fetch failure error. Recoverable. */
 export class NetworkError extends AppError {
   constructor(opts?: { message?: string; originalError?: unknown }) {
     super({
@@ -85,6 +91,7 @@ export class NetworkError extends AppError {
   }
 }
 
+/** Authentication or authorization failure error. Not recoverable without re-login. */
 export class AuthError extends AppError {
   constructor(
     code: ErrorCode.AUTH_EXPIRED | ErrorCode.AUTH_UNAUTHORIZED | ErrorCode.AUTH_FORBIDDEN =
@@ -119,6 +126,7 @@ export class AuthError extends AppError {
   }
 }
 
+/** Rate limit exceeded error (HTTP 429). Recoverable after waiting. */
 export class RateLimitError extends AppError {
   constructor(opts?: { originalError?: unknown }) {
     super({
@@ -134,6 +142,7 @@ export class RateLimitError extends AppError {
   }
 }
 
+/** AI streaming response interrupted or unavailable. Recoverable by retrying. */
 export class StreamError extends AppError {
   constructor(opts?: { message?: string; originalError?: unknown }) {
     super({
@@ -149,6 +158,7 @@ export class StreamError extends AppError {
   }
 }
 
+/** Input validation failure (Zod, form data, etc.). Recoverable by correcting input. */
 export class ValidationError extends AppError {
   constructor(opts?: { message?: string; userMessage?: string; originalError?: unknown }) {
     super({
@@ -168,6 +178,13 @@ export class ValidationError extends AppError {
 // classifyError — converts raw errors into AppError taxonomy
 // ---------------------------------------------------------------------------
 
+/**
+ * Classify a raw error into the AppError taxonomy.
+ * Inspects error type, message content, and HTTP status codes to determine the category.
+ *
+ * @param error - Any thrown error (Error, TypeError, DOMException, or unknown)
+ * @returns An AppError instance with appropriate code, user message, and recovery info
+ */
 export function classifyError(error: unknown): AppError {
   // Already classified
   if (error instanceof AppError) return error;
@@ -255,6 +272,13 @@ export function classifyError(error: unknown): AppError {
 // getUserFriendlyMessage — shorthand
 // ---------------------------------------------------------------------------
 
+/**
+ * Get a user-friendly error message (PT-BR) for any error.
+ * Shorthand for classifyError(error).userMessage.
+ *
+ * @param error - Any thrown error
+ * @returns Localized user-facing error message
+ */
 export function getUserFriendlyMessage(error: unknown): string {
   return classifyError(error).userMessage;
 }

@@ -6,6 +6,7 @@ const ContextConfigSchema = z.object({
   maxMessages: z.coerce.number().int().min(1).default(50),
 });
 
+/** Maximum context window sizes (in tokens) for known Gemini models. */
 export const CONTEXT_LIMITS: Record<string, number> = {
   "gemini-2.0-flash": 1_048_576,
   "gemini-2.0-pro": 2_097_152,
@@ -28,6 +29,11 @@ function getContextConfig() {
   return _contextConfig;
 }
 
+/**
+ * Get the context budget configuration (max tokens and messages for history).
+ *
+ * @returns Object with maxHistoryTokens and maxMessages limits
+ */
 export function getContextBudget(): { maxHistoryTokens: number; maxMessages: number } {
   const config = getContextConfig();
   return {
@@ -36,6 +42,12 @@ export function getContextBudget(): { maxHistoryTokens: number; maxMessages: num
   };
 }
 
+/**
+ * Estimate the token count for a text string using a ~4 chars/token heuristic.
+ *
+ * @param text - The text to estimate tokens for
+ * @returns Estimated token count (ceiling)
+ */
 export function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4);
 }
@@ -56,6 +68,12 @@ function messageToText(message: ModelMessage): string {
   return "";
 }
 
+/**
+ * Estimate total token count for an array of messages, including role overhead.
+ *
+ * @param messages - Array of ModelMessage objects
+ * @returns Total estimated token count
+ */
 export function estimateMessagesTokens(messages: ModelMessage[]): number {
   let total = 0;
   for (const msg of messages) {
@@ -65,6 +83,14 @@ export function estimateMessagesTokens(messages: ModelMessage[]): number {
   return total;
 }
 
+/**
+ * Truncate conversation history to fit within the context budget.
+ * Uses a sliding window approach, keeping the most recent messages.
+ *
+ * @param messages - Full conversation history
+ * @param maxTokens - Optional token limit override (defaults to config value)
+ * @returns Truncated message array that fits within the budget
+ */
 export function truncateHistory(
   messages: ModelMessage[],
   maxTokens?: number

@@ -25,6 +25,8 @@ export interface UsageSummary {
 
 /**
  * Record a token usage entry after a completed AI response.
+ *
+ * @param data - Usage data including user, conversation, token counts, model, and cost
  */
 export async function recordUsage(data: RecordUsageInput): Promise<void> {
   const values: NewTokenUsage = {
@@ -43,6 +45,11 @@ export async function recordUsage(data: RecordUsageInput): Promise<void> {
 
 /**
  * Get aggregated token usage for a user within a date range.
+ *
+ * @param userId - The authenticated user's UUID
+ * @param startDate - Start of the period (inclusive)
+ * @param endDate - Optional end of the period (exclusive)
+ * @returns Aggregated usage summary (tokens, cost)
  */
 export async function getUserUsageByPeriod(
   userId: string,
@@ -80,6 +87,9 @@ export async function getUserUsageByPeriod(
 
 /**
  * Get token usage for the current day (UTC).
+ *
+ * @param userId - The authenticated user's UUID
+ * @returns Today's aggregated usage summary
  */
 export async function getUserDailyUsage(
   userId: string
@@ -93,6 +103,9 @@ export async function getUserDailyUsage(
 
 /**
  * Get token usage for the current month (UTC).
+ *
+ * @param userId - The authenticated user's UUID
+ * @returns This month's aggregated usage summary
  */
 export async function getUserMonthlyUsage(
   userId: string
@@ -106,6 +119,9 @@ export async function getUserMonthlyUsage(
 
 /**
  * Get token usage for a specific conversation.
+ *
+ * @param conversationId - The conversation UUID
+ * @returns Aggregated usage summary for the conversation
  */
 export async function getConversationUsage(
   conversationId: string

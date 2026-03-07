@@ -1,5 +1,10 @@
-// ── Public API for AI module ────────────────────────────────────────
-// Barrel export for all AI-related functionality.
+/**
+ * AI Module — Public API
+ *
+ * Barrel export for all AI-related functionality.
+ * Provides client creation, prompt building, knowledge retrieval,
+ * streaming/non-streaming chat, context management, pricing, and config.
+ */
 
 // AI Config
 export { getAIConfig, AI_PRESETS } from "./config";

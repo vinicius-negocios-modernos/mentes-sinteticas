@@ -9,6 +9,9 @@ import {
 
 /**
  * Get a mind by its URL slug (e.g. "antonio-napole").
+ *
+ * @param slug - The mind's URL-safe slug
+ * @returns The mind record, or null if not found
  */
 export async function getMindBySlug(slug: string): Promise<Mind | null> {
   const [mind] = await db
@@ -23,6 +26,9 @@ export async function getMindBySlug(slug: string): Promise<Mind | null> {
 /**
  * Get a mind by its display name (e.g. "Antonio Napole").
  * Used for backward compatibility with manifest-based code.
+ *
+ * @param name - The mind's display name
+ * @returns The mind record, or null if not found
  */
 export async function getMindByName(name: string): Promise<Mind | null> {
   const [mind] = await db
@@ -35,7 +41,9 @@ export async function getMindByName(name: string): Promise<Mind | null> {
 }
 
 /**
- * List all active minds. Returns display names for backward compat.
+ * List all active minds, ordered by name.
+ *
+ * @returns Array of active Mind records
  */
 export async function listActiveMinds(): Promise<Mind[]> {
   return db
@@ -47,6 +55,8 @@ export async function listActiveMinds(): Promise<Mind[]> {
 
 /**
  * List active mind names (string[]). Drop-in replacement for getAvailableMinds().
+ *
+ * @returns Array of mind display names
  */
 export async function listActiveMindNames(): Promise<string[]> {
   const activeMindRows = await listActiveMinds();
@@ -54,7 +64,10 @@ export async function listActiveMindNames(): Promise<string[]> {
 }
 
 /**
- * Get a mind with its knowledge documents.
+ * Get a mind with its associated knowledge documents.
+ *
+ * @param mindId - The mind's UUID
+ * @returns Object with mind and documents, or null if mind not found
  */
 export async function getMindWithDocuments(
   mindId: string

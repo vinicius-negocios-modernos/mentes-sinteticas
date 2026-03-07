@@ -4,6 +4,12 @@ import { messages, type Message, type NewMessage } from "@/db/schema";
 
 /**
  * Create a message in a conversation.
+ *
+ * @param conversationId - The parent conversation UUID
+ * @param role - Message author role ("user" or "assistant")
+ * @param content - The message text content
+ * @param tokenCount - Optional token count for usage tracking
+ * @returns The newly created message record
  */
 export async function createMessage(
   conversationId: string,
@@ -26,6 +32,9 @@ export async function createMessage(
 
 /**
  * List all messages in a conversation, ordered chronologically.
+ *
+ * @param conversationId - The conversation UUID
+ * @returns Array of messages sorted by createdAt ascending
  */
 export async function listByConversation(
   conversationId: string

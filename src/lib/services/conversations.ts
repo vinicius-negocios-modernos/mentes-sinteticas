@@ -9,6 +9,11 @@ import {
 /**
  * Create a new conversation for a user + mind.
  * Title is auto-generated from the first user message (~60 chars).
+ *
+ * @param userId - The authenticated user's UUID
+ * @param mindId - The mind's UUID
+ * @param title - Conversation title (truncated to 60 chars)
+ * @returns The newly created conversation record
  */
 export async function createConversation(
   userId: string,
@@ -29,6 +34,10 @@ export async function createConversation(
 
 /**
  * Get a single conversation by ID, scoped to the owning user.
+ *
+ * @param conversationId - The conversation UUID
+ * @param userId - The authenticated user's UUID (for RLS scoping)
+ * @returns The conversation record, or null if not found / not owned
  */
 export async function getConversationById(
   conversationId: string,
@@ -48,6 +57,10 @@ export async function getConversationById(
 /**
  * List conversations for a user, optionally filtered by mind.
  * Ordered by most-recently-updated first.
+ *
+ * @param userId - The authenticated user's UUID
+ * @param mindId - Optional mind UUID filter
+ * @returns Array of conversation records
  */
 export async function listByUser(
   userId: string,
@@ -68,6 +81,10 @@ export async function listByUser(
 /**
  * Delete a conversation (cascade deletes its messages via FK).
  * Scoped to the owning user as RLS backup.
+ *
+ * @param conversationId - The conversation UUID to delete
+ * @param userId - The authenticated user's UUID (for ownership check)
+ * @returns True if a conversation was deleted, false if not found / not owned
  */
 export async function deleteConversation(
   conversationId: string,
@@ -85,6 +102,11 @@ export async function deleteConversation(
 
 /**
  * Update conversation title.
+ *
+ * @param conversationId - The conversation UUID
+ * @param userId - The authenticated user's UUID (for ownership check)
+ * @param title - New title (truncated to 60 chars)
+ * @returns The updated conversation, or null if not found / not owned
  */
 export async function updateTitle(
   conversationId: string,
@@ -104,6 +126,8 @@ export async function updateTitle(
 
 /**
  * Touch updatedAt timestamp on a conversation.
+ *
+ * @param conversationId - The conversation UUID to update
  */
 export async function touchConversation(
   conversationId: string
