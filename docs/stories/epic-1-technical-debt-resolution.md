@@ -71,7 +71,7 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 - [ ] Story 4.3: CI/CD Pipeline (GitHub Actions + Vercel)
 - [ ] Story 4.4: Monitoring e Observabilidade (Sentry + Structured Logging + Analytics)
 - [ ] Story 4.5: Mobile-First Redesign (dvh, Touch Targets, Safe Areas)
-- [ ] Story 4.6: Accessibility Pass 1 (ARIA, Live Regions, Focus, Contrast)
+- [x] Story 4.6: Accessibility Pass 1 (ARIA, Live Regions, Focus, Contrast)
 - [ ] Story 4.7: Loading/Suspense Boundaries + Greetings Personalizados
 - [ ] Story 4.8: Token Usage Tracking + API Cost Management
 
