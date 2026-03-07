@@ -23,11 +23,62 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#c9a55a" },
+    { media: "(prefers-color-scheme: light)", color: "#c9a55a" },
+  ],
 };
 
 export const metadata: Metadata = {
-  title: "Mentes Sinteticas",
-  description: "Dialogos estrategicos com clones digitais de grandes pensadores.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://mentes-sinteticas.vercel.app"
+  ),
+  title: {
+    default: "Mentes Sinteticas — O Atheneum Digital",
+    template: "%s | Mentes Sinteticas",
+  },
+  description:
+    "Dialogue com as maiores mentes da humanidade. Uma experiencia imersiva de conversas com mentes sinteticas inspiradas em pensadores historicos.",
+  keywords: [
+    "mentes sinteticas",
+    "inteligencia artificial",
+    "IA conversacional",
+    "pensadores historicos",
+    "dialogos filosoficos",
+    "atheneum digital",
+    "dark academia",
+    "chatbot IA",
+  ],
+  authors: [{ name: "Mentes Sinteticas" }],
+  creator: "Mentes Sinteticas",
+  publisher: "Mentes Sinteticas",
+  robots: {
+    index: true,
+    follow: true,
+  },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    apple: "/apple-icon",
+  },
+  openGraph: {
+    title: "Mentes Sinteticas — O Atheneum Digital",
+    description:
+      "Dialogue com as maiores mentes da humanidade. Uma experiencia imersiva de conversas com mentes sinteticas inspiradas em pensadores historicos.",
+    url: "/",
+    siteName: "Mentes Sinteticas",
+    type: "website",
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mentes Sinteticas — O Atheneum Digital",
+    description:
+      "Dialogue com as maiores mentes da humanidade. Uma experiencia imersiva de conversas com mentes sinteticas.",
+  },
 };
 
 async function signOut() {
@@ -48,6 +99,28 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} safe-area-top safe-area-x`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "Mentes Sinteticas",
+              alternateName: "O Atheneum Digital",
+              description:
+                "Dialogue com as maiores mentes da humanidade. Uma experiencia imersiva de conversas com mentes sinteticas inspiradas em pensadores historicos.",
+              url: "https://mentes-sinteticas.vercel.app",
+              applicationCategory: "EducationalApplication",
+              operatingSystem: "Web",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "BRL",
+              },
+              inLanguage: "pt-BR",
+            }),
+          }}
+        />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-background focus:text-foreground focus:p-4 focus:rounded-md focus:ring-2 focus:ring-ring"
