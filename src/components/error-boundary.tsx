@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/logger";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -36,8 +38,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log for debugging / future Sentry integration (Fase 4)
-    console.error("[ErrorBoundary]", error, errorInfo);
+    logger.error("[ErrorBoundary]", error, { componentStack: errorInfo.componentStack ?? undefined });
+
+    // Report to Sentry if initialized (graceful — no-op without DSN)
+    if (Sentry.isInitialized()) {
+      Sentry.captureException(error, {
+        extra: { componentStack: errorInfo.componentStack },
+      });
+    }
   }
 
   handleReset = () => {

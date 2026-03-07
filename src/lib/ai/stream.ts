@@ -5,6 +5,7 @@ import { getAIConfig } from "./config";
 import { buildSystemPrompt, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
 import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
 import { truncateHistory, estimateMessagesTokens } from "./context";
+import { logger } from "@/lib/logger";
 
 /**
  * Build the message array for streaming, including knowledge context injection.
@@ -55,7 +56,7 @@ async function buildStreamMessages(
   const beforeTokens = estimateMessagesTokens(history);
   const afterTokens = estimateMessagesTokens(truncatedHistory);
   if (beforeTokens !== afterTokens) {
-    console.log(
+    logger.info(
       `[context] History truncated: ${history.length} → ${truncatedHistory.length} messages, ~${beforeTokens} → ~${afterTokens} tokens`
     );
   }

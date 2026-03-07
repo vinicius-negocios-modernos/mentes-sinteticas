@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { streamMindChat } from "@/lib/ai";
 import {
@@ -16,6 +17,7 @@ import {
 import { createMessage } from "@/lib/services/messages";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
 import { estimateMessagesTokens } from "@/lib/ai/context";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -113,25 +115,30 @@ export async function POST(request: Request) {
     const incomingHistory = history ?? [];
     if (incomingHistory.length > 0) {
       const estimatedTokens = estimateMessagesTokens(incomingHistory);
-      console.log(
+      logger.info(
         `[context] Incoming history: ${incomingHistory.length} messages, ~${estimatedTokens} estimated tokens`
       );
     }
 
     const capturedConversationId = activeConversationId;
 
-    const result = await streamMindChat({
-      mindName: validatedMindName,
-      userMessage: sanitizedMessage,
-      history: history ?? [],
-      onFinish: async ({ text }) => {
-        // Persist assistant response after stream completes
-        if (capturedConversationId) {
-          await createMessage(capturedConversationId, "assistant", text);
-          await touchConversation(capturedConversationId);
-        }
-      },
-    });
+    const result = await Sentry.startSpan(
+      { name: "gemini.generateContent", op: "ai.call" },
+      async () => {
+        return streamMindChat({
+          mindName: validatedMindName,
+          userMessage: sanitizedMessage,
+          history: history ?? [],
+          onFinish: async ({ text }) => {
+            // Persist assistant response after stream completes
+            if (capturedConversationId) {
+              await createMessage(capturedConversationId, "assistant", text);
+              await touchConversation(capturedConversationId);
+            }
+          },
+        });
+      }
+    );
 
     // Return streaming text response with conversationId in custom header
     return result.toTextStreamResponse({
@@ -152,7 +159,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("Streaming chat error:", error);
+    logger.error("Streaming chat error:", error instanceof Error ? error : new Error(String(error)));
     return Response.json(
       { error: "Erro ao processar sua mensagem. Tente novamente." },
       { status: 500 }

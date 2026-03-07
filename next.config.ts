@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -6,7 +7,7 @@ const ContentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  `connect-src 'self' *.supabase.co generativelanguage.googleapis.com`,
+  `connect-src 'self' *.supabase.co generativelanguage.googleapis.com *.ingest.sentry.io`,
   "img-src 'self' data: blob:",
   "font-src 'self'",
   "frame-ancestors 'none'",
@@ -60,4 +61,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Conditionally wrap with Sentry — builds work without SENTRY_AUTH_TOKEN
+const sentryEnabled = !!process.env.SENTRY_AUTH_TOKEN;
+
+export default sentryEnabled
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      silent: true,
+      sourcemaps: {
+        deleteSourcemapsAfterUpload: true,
+      },
+      bundleSizeOptimizations: {
+        excludeDebugStatements: true,
+      },
+    })
+  : nextConfig;

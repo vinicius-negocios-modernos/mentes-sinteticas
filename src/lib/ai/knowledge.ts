@@ -3,6 +3,7 @@ import { promises as fsp } from "fs";
 import path from "path";
 import type { MindData, Manifest } from "@/lib/types";
 import { ManifestSchema } from "@/lib/validations/manifest";
+import { logger } from "@/lib/logger";
 
 const MANIFEST_PATH = path.join(process.cwd(), "data", "minds_manifest.json");
 
@@ -14,7 +15,7 @@ async function readManifest(): Promise<Manifest | null> {
     const parsed: unknown = JSON.parse(data);
     const result = ManifestSchema.safeParse(parsed);
     if (!result.success) {
-      console.warn("Manifest validation failed:", result.error.issues);
+      logger.warn("Manifest validation failed:", { issues: result.error.issues });
       return null;
     }
     return result.data;

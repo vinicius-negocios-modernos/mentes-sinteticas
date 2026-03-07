@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -66,6 +68,8 @@ export default async function RootLayout({
           </ErrorBoundary>
           <Toaster />
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { getAIConfig } from "./config";
 import { buildSystemPrompt } from "./prompts";
 import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
 import { getContextBudget, estimateTokenCount } from "./context";
+import { logger } from "@/lib/logger";
 
 /**
  * Create a non-streaming chat session for a mind (legacy path).
@@ -63,7 +64,7 @@ export async function createMindChat(mindName: string, history: GeminiHistoryEnt
     truncated.unshift(chatHistory[i]);
   }
   if (truncated.length < chatHistory.length) {
-    console.log(
+    logger.info(
       `[context] Chat history truncated: ${chatHistory.length} → ${truncated.length} messages`
     );
   }
