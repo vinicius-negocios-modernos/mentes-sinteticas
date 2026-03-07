@@ -19,6 +19,9 @@ const {
   mockCreateMessage,
   mockStreamMindChat,
   mockEstimateMessagesTokens,
+  mockGetUserDailyUsage,
+  mockGetUserMonthlyUsage,
+  mockRecordUsage,
 } = vi.hoisted(() => ({
   mockCheckRateLimit: vi.fn(),
   mockIncrementRateLimit: vi.fn(),
@@ -30,6 +33,13 @@ const {
   mockCreateMessage: vi.fn(),
   mockStreamMindChat: vi.fn(),
   mockEstimateMessagesTokens: vi.fn(() => 100),
+  mockGetUserDailyUsage: vi.fn(() =>
+    Promise.resolve({ totalTokens: 0, totalCost: 0 })
+  ),
+  mockGetUserMonthlyUsage: vi.fn(() =>
+    Promise.resolve({ totalTokens: 0, totalCost: 0 })
+  ),
+  mockRecordUsage: vi.fn(() => Promise.resolve()),
 }));
 
 // ── Mocks ─────────────────────────────────────────────────────────────
@@ -64,10 +74,29 @@ vi.mock("@/lib/services/messages", () => ({
 
 vi.mock("@/lib/ai", () => ({
   streamMindChat: mockStreamMindChat,
+  TOKEN_LIMITS: { daily: 500000, monthly: 5000000 },
 }));
 
 vi.mock("@/lib/ai/context", () => ({
   estimateMessagesTokens: mockEstimateMessagesTokens,
+}));
+
+vi.mock("@/lib/services/token-usage", () => ({
+  getUserDailyUsage: mockGetUserDailyUsage,
+  getUserMonthlyUsage: mockGetUserMonthlyUsage,
+  recordUsage: mockRecordUsage,
+}));
+
+vi.mock("@/lib/ai/pricing", () => ({
+  calculateCost: vi.fn(() => 0.001),
+}));
+
+vi.mock("@sentry/nextjs", () => ({
+  startSpan: vi.fn((_opts: unknown, fn: () => unknown) => fn()),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
 // ── Import SUT after mocks ────────────────────────────────────────────
@@ -290,20 +319,37 @@ describe("POST /api/chat", () => {
       setupAuthenticatedAndAllowed();
       setupMindAndConversation();
 
-      let capturedOnFinish: (args: { text: string }) => Promise<void>;
-      mockStreamMindChat.mockImplementation(async (opts: { onFinish: typeof capturedOnFinish }) => {
-        capturedOnFinish = opts.onFinish;
-        return {
-          toTextStreamResponse: ({ headers }: { headers: Record<string, string> }) =>
-            new Response("stream", { status: 200, headers }),
-        };
-      });
+      let capturedOnFinish: (args: {
+        text: string;
+        usage?: { inputTokens: number; outputTokens: number };
+        model?: string;
+      }) => Promise<void>;
+      mockStreamMindChat.mockImplementation(
+        async (opts: { onFinish: typeof capturedOnFinish }) => {
+          capturedOnFinish = opts.onFinish;
+          return {
+            toTextStreamResponse: ({
+              headers,
+            }: {
+              headers: Record<string, string>;
+            }) => new Response("stream", { status: 200, headers }),
+          };
+        }
+      );
 
       await POST(makeRequest(validBody()));
 
       // Invoke the captured onFinish callback
-      await capturedOnFinish!({ text: "AI response text" });
-      expect(mockCreateMessage).toHaveBeenCalledWith(CONV_ID, "assistant", "AI response text");
+      await capturedOnFinish!({
+        text: "AI response text",
+        usage: { inputTokens: 50, outputTokens: 100 },
+        model: "gemini-2.0-flash",
+      });
+      expect(mockCreateMessage).toHaveBeenCalledWith(
+        CONV_ID,
+        "assistant",
+        "AI response text"
+      );
       expect(mockTouchConversation).toHaveBeenCalledWith(CONV_ID);
     });
   });

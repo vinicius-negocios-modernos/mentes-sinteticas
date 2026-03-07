@@ -1,12 +1,18 @@
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import { streamMindChat } from "@/lib/ai";
+import { streamMindChat, TOKEN_LIMITS } from "@/lib/ai";
+import { calculateCost } from "@/lib/ai/pricing";
 import {
   checkRateLimit,
   incrementRateLimit,
   cleanupExpiredLimits,
   DEFAULT_LIMITS,
 } from "@/lib/services/rate-limiter";
+import {
+  recordUsage,
+  getUserDailyUsage,
+  getUserMonthlyUsage,
+} from "@/lib/services/token-usage";
 import { SendMessageInputSchema } from "@/lib/validations/chat";
 import { getMindByName } from "@/lib/services/minds";
 import {
@@ -80,6 +86,42 @@ export async function POST(request: Request) {
       );
     }
 
+    // ── Step 4b: Check token budget limits ─────────────────────────
+    const [dailyUsage, monthlyUsage] = await Promise.all([
+      getUserDailyUsage(userId),
+      getUserMonthlyUsage(userId),
+    ]);
+
+    if (TOKEN_LIMITS.daily > 0 && dailyUsage.totalTokens >= TOKEN_LIMITS.daily) {
+      return Response.json(
+        {
+          error:
+            "Voce atingiu o limite de uso diario de tokens. Tente novamente amanha.",
+        },
+        { status: 429 }
+      );
+    }
+
+    if (
+      TOKEN_LIMITS.monthly > 0 &&
+      monthlyUsage.totalTokens >= TOKEN_LIMITS.monthly
+    ) {
+      return Response.json(
+        {
+          error:
+            "Voce atingiu o limite de uso mensal de tokens. Tente novamente no proximo mes.",
+        },
+        { status: 429 }
+      );
+    }
+
+    // Calculate warning threshold (80%)
+    const dailyPercentage =
+      TOKEN_LIMITS.daily > 0
+        ? dailyUsage.totalTokens / TOKEN_LIMITS.daily
+        : 0;
+    const approachingLimit = dailyPercentage >= 0.8;
+
     // ── Step 5: Resolve mind and manage conversation ──────────────
     let activeConversationId = validatedConversationId;
 
@@ -129,11 +171,33 @@ export async function POST(request: Request) {
           mindName: validatedMindName,
           userMessage: sanitizedMessage,
           history: history ?? [],
-          onFinish: async ({ text }) => {
+          onFinish: async ({ text, usage, model }) => {
             // Persist assistant response after stream completes
             if (capturedConversationId) {
               await createMessage(capturedConversationId, "assistant", text);
               await touchConversation(capturedConversationId);
+            }
+
+            // Record token usage (fire-and-forget, non-blocking)
+            if (usage && capturedConversationId) {
+              const costUsd = calculateCost(
+                model ?? "gemini-2.0-flash",
+                usage.inputTokens,
+                usage.outputTokens
+              );
+              recordUsage({
+                userId,
+                conversationId: capturedConversationId,
+                inputTokens: usage.inputTokens,
+                outputTokens: usage.outputTokens,
+                model: model ?? "gemini-2.0-flash",
+                costUsd,
+              }).catch((err) => {
+                logger.error(
+                  "Failed to record token usage:",
+                  err instanceof Error ? err : new Error(String(err))
+                );
+              });
             }
           },
         });
@@ -141,10 +205,16 @@ export async function POST(request: Request) {
     );
 
     // Return streaming text response with conversationId in custom header
+    const responseHeaders: Record<string, string> = {
+      "X-Conversation-Id": capturedConversationId ?? "",
+    };
+
+    if (approachingLimit) {
+      responseHeaders["X-Token-Usage-Warning"] = "approaching-limit";
+    }
+
     return result.toTextStreamResponse({
-      headers: {
-        "X-Conversation-Id": capturedConversationId ?? "",
-      },
+      headers: responseHeaders,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

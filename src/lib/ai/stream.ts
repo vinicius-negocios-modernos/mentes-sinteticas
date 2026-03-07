@@ -73,11 +73,20 @@ async function buildStreamMessages(
   return messages;
 }
 
+export interface StreamUsageData {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface StreamMindChatOptions {
   mindName: string;
   userMessage: string;
   history?: ModelMessage[];
-  onFinish?: (result: { text: string }) => void | Promise<void>;
+  onFinish?: (result: {
+    text: string;
+    usage?: StreamUsageData;
+    model?: string;
+  }) => void | Promise<void>;
 }
 
 /**
@@ -116,8 +125,17 @@ export async function streamMindChat({
     topP: aiConfig.topP,
     maxOutputTokens: aiConfig.maxOutputTokens,
     onFinish: onFinish
-      ? async ({ text }) => {
-          await onFinish({ text });
+      ? async ({ text, usage }) => {
+          await onFinish({
+            text,
+            usage: usage
+              ? {
+                  inputTokens: usage.inputTokens ?? 0,
+                  outputTokens: usage.outputTokens ?? 0,
+                }
+              : undefined,
+            model: aiConfig.model,
+          });
         }
       : undefined,
   });

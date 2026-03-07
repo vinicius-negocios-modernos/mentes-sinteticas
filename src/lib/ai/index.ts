@@ -34,4 +34,10 @@ export {
 
 // Streaming (Vercel AI SDK)
 export { streamMindChat } from "./stream";
-export type { StreamMindChatOptions } from "./stream";
+export type { StreamMindChatOptions, StreamUsageData } from "./stream";
+
+// Pricing
+export { calculateCost, MODEL_PRICING } from "./pricing";
+
+// Token Limits
+export { TOKEN_LIMITS } from "./config";

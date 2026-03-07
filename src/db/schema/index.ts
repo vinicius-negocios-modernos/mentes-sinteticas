@@ -20,3 +20,8 @@ export {
   type RateLimit,
   type NewRateLimit,
 } from "./rate-limits";
+export {
+  tokenUsage,
+  type TokenUsage,
+  type NewTokenUsage,
+} from "./token-usage";

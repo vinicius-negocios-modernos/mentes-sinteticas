@@ -31,6 +31,13 @@ export const AI_PRESETS = {
   },
 } as const;
 
+// ── Token Budget Limits ──────────────────────────────────────────────
+
+export const TOKEN_LIMITS = {
+  daily: parseInt(process.env.TOKEN_DAILY_LIMIT ?? "500000", 10),
+  monthly: parseInt(process.env.TOKEN_MONTHLY_LIMIT ?? "5000000", 10),
+} as const;
+
 let _aiConfig: AIModelConfig | null = null;
 
 export function getAIConfig(): AIModelConfig {

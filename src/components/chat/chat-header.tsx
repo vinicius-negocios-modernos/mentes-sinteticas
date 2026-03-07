@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -15,11 +16,34 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+function formatTokenCount(tokens: number): string {
+  if (tokens < 1000) return `${tokens} tokens`;
+  if (tokens < 1_000_000) return `~${(tokens / 1000).toFixed(1)}K tokens`;
+  return `~${(tokens / 1_000_000).toFixed(1)}M tokens`;
+}
+
+interface UsageData {
+  daily: {
+    tokens: number;
+    cost: number;
+    limit: number;
+    percentage: number;
+  };
+  monthly: {
+    tokens: number;
+    cost: number;
+    limit: number;
+    percentage: number;
+  };
+}
+
 interface ChatHeaderProps {
   mindName: string;
   mindDescription?: string;
   backHref?: string;
   className?: string;
+  /** Increment to trigger a usage data refresh */
+  refreshTrigger?: number;
 }
 
 export default function ChatHeader({
@@ -27,7 +51,29 @@ export default function ChatHeader({
   mindDescription,
   backHref = "/",
   className,
+  refreshTrigger = 0,
 }: ChatHeaderProps) {
+  const [usage, setUsage] = useState<UsageData | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchUsage() {
+      try {
+        const res = await fetch("/api/usage");
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setUsage(data);
+        }
+      } catch {
+        // Non-critical — silently ignore
+      }
+    }
+    fetchUsage();
+    return () => { cancelled = true; };
+  }, [refreshTrigger]);
+
+  const approachingLimit = usage && usage.daily.percentage >= 80;
+
   return (
     <header
       className={cn(
@@ -57,11 +103,26 @@ export default function ChatHeader({
             <span className="text-xs text-green-400 hidden sm:inline">Online</span>
           </span>
         </div>
-        {mindDescription && (
-          <p className="text-sm text-gray-400 truncate mt-0.5">
-            {mindDescription}
-          </p>
-        )}
+        <div className="flex items-center gap-3 mt-0.5">
+          {mindDescription && (
+            <p className="text-sm text-gray-400 truncate">
+              {mindDescription}
+            </p>
+          )}
+          {usage && (
+            <span
+              className={cn(
+                "text-xs shrink-0",
+                approachingLimit
+                  ? "text-amber-400"
+                  : "text-muted-foreground"
+              )}
+              title={`Uso diario: ${usage.daily.percentage}% | $${usage.daily.cost.toFixed(4)}`}
+            >
+              {formatTokenCount(usage.daily.tokens)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* End Session button */}
