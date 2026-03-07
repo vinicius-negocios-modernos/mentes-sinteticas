@@ -40,12 +40,12 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 ## Stories (ordenadas por dependencia)
 
 ### Fase 0: Recuperacao Imediata
-- [ ] Story 0.1: Re-ingestao de File URIs do Gemini e Restauracao do Sistema
+- [x] Story 0.1: Re-ingestao de File URIs do Gemini e Restauracao do Sistema
 
 ### Fase 1: Quick Wins
-- [ ] Story 1.1: Cleanup e Correcoes Rapidas (tipos, next/link, expires_at, async reads)
-- [ ] Story 1.2: Error Handling e Graceful Degradation
-- [ ] Story 1.3: Environment Variables e Configuracao Segura
+- [x] Story 1.1: Cleanup e Correcoes Rapidas (tipos, next/link, expires_at, async reads)
+- [x] Story 1.2: Error Handling e Graceful Degradation
+- [x] Story 1.3: Environment Variables e Configuracao Segura
 
 ### Fase 2: Fundacao de Dados
 - [x] Story 2.1: Setup Supabase + Schema Inicial + Drizzle ORM
@@ -67,20 +67,20 @@ Cobre todas as 6 fases do plano de resolucao de divida tecnica:
 
 ### Fase 4: Qualidade + Mobile + Acessibilidade
 - [x] Story 4.1: Setup Test Framework (Vitest + RTL + Playwright) + Unit Tests
-- [ ] Story 4.2: Integration Tests (API, RLS, DB) + E2E Tests
-- [ ] Story 4.3: CI/CD Pipeline (GitHub Actions + Vercel)
-- [ ] Story 4.4: Monitoring e Observabilidade (Sentry + Structured Logging + Analytics)
-- [ ] Story 4.5: Mobile-First Redesign (dvh, Touch Targets, Safe Areas)
+- [x] Story 4.2: Integration Tests (API, RLS, DB) + E2E Tests
+- [x] Story 4.3: CI/CD Pipeline (GitHub Actions + Vercel)
+- [x] Story 4.4: Monitoring e Observabilidade (Sentry + Structured Logging + Analytics)
+- [x] Story 4.5: Mobile-First Redesign (dvh, Touch Targets, Safe Areas)
 - [x] Story 4.6: Accessibility Pass 1 (ARIA, Live Regions, Focus, Contrast)
 - [x] Story 4.7: Loading/Suspense Boundaries + Greetings Personalizados
 - [x] Story 4.8: Token Usage Tracking + API Cost Management
 
 ### Fase 5: Polish & Launch Readiness
-- [ ] Story 5.1: Branding (Favicon, App Icons, Meta Tags, SEO, Open Graph)
-- [ ] Story 5.2: Empty States + Onboarding / Tutorial
-- [ ] Story 5.3: Code Documentation + Hygiene (.env fix, error messages, fonts)
-- [ ] Story 5.4: Docker Setup + Containerization
-- [ ] Story 5.5: Polish Final (Feedback Haptico, i18n Prep)
+- [x] Story 5.1: Branding (Favicon, App Icons, Meta Tags, SEO, Open Graph)
+- [x] Story 5.2: Empty States + Onboarding / Tutorial
+- [x] Story 5.3: Code Documentation + Hygiene (.env fix, error messages, fonts)
+- [x] Story 5.4: Docker Setup + Containerization
+- [x] Story 5.5: Polish Final (Feedback Haptico, i18n Prep)
 
 ### Fase 6: Features Legendarias (pos-launch)
 - [ ] Story 6.1: Session Themes -- Temas Visuais por Mente (8-12h)
