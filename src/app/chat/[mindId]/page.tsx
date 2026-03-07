@@ -1,9 +1,12 @@
+import { Suspense } from "react";
 import { getMinds, getConversations, getConversationMessages } from "@/app/actions";
 import { getMindByName } from "@/lib/services/minds";
+import { mindGreetings } from "@/lib/ai/greetings";
 import ChatHeader from "@/components/chat/chat-header";
 import ChatInterface from "@/components/chat/chat-interface";
 import ConversationList from "@/components/chat/conversation-list";
 import ConversationDrawer from "@/components/chat/conversation-drawer";
+import { ConversationListSkeleton } from "@/components/skeletons/conversation-list-skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
 import type { ChatMessage } from "@/lib/types";
 import Link from "next/link";
@@ -11,6 +14,43 @@ import Link from "next/link";
 interface ChatPageProps {
   params: Promise<{ mindId: string }>;
   searchParams: Promise<{ conversation?: string }>;
+}
+
+/**
+ * Async Server Component for the conversation sidebar.
+ * Extracted to enable Suspense boundary around conversation loading.
+ */
+async function ConversationSidebar({
+  mindName,
+  activeConversationId,
+}: {
+  mindName: string;
+  activeConversationId?: string;
+}) {
+  const conversations = await getConversations(mindName);
+
+  return (
+    <ErrorBoundary
+      variant="inline"
+      fallback={({ reset }) => (
+        <div className="text-center p-4">
+          <p className="text-sm text-red-400 mb-2">Erro ao carregar conversas</p>
+          <button
+            onClick={reset}
+            className="text-xs text-purple-400 hover:underline"
+          >
+            Recarregar
+          </button>
+        </div>
+      )}
+    >
+      <ConversationList
+        conversations={conversations}
+        mindId={mindName}
+        activeConversationId={activeConversationId}
+      />
+    </ErrorBoundary>
+  );
 }
 
 export default async function ChatPage({ params, searchParams }: ChatPageProps) {
@@ -37,8 +77,9 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
   // Load mind details for description
   const mindData = await getMindByName(decodedName).catch(() => null);
   const mindDescription = mindData?.title ?? undefined;
+  const mindSlug = mindData?.slug ?? decodedName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-  // Load conversation list for sidebar
+  // Load conversation list for drawer (needs to be available immediately)
   const conversations = await getConversations(decodedName);
 
   // Load existing conversation messages if resuming
@@ -57,6 +98,9 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
     }
   }
 
+  // Resolve personalized greeting and prompts for this mind
+  const greetingConfig = mindGreetings[mindSlug];
+
   return (
     <div className="min-h-[100dvh] p-2 sm:p-4 md:p-8 font-[family-name:var(--font-geist-sans)] flex flex-col">
       <div className="flex items-center gap-2">
@@ -74,26 +118,12 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
           <h2 className="text-sm font-semibold text-gray-400 mb-3 px-1">
             Conversas
           </h2>
-          <ErrorBoundary
-            variant="inline"
-            fallback={({ reset }) => (
-              <div className="text-center p-4">
-                <p className="text-sm text-red-400 mb-2">Erro ao carregar conversas</p>
-                <button
-                  onClick={reset}
-                  className="text-xs text-purple-400 hover:underline"
-                >
-                  Recarregar
-                </button>
-              </div>
-            )}
-          >
-            <ConversationList
-              conversations={conversations}
-              mindId={decodedName}
+          <Suspense fallback={<ConversationListSkeleton />}>
+            <ConversationSidebar
+              mindName={decodedName}
               activeConversationId={activeConversationId}
             />
-          </ErrorBoundary>
+          </Suspense>
         </aside>
 
         {/* Chat Area */}
@@ -103,6 +133,8 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
             mindDescription={mindDescription}
             initialMessages={initialMessages}
             initialConversationId={activeConversationId}
+            greeting={greetingConfig?.greeting}
+            suggestedPrompts={greetingConfig?.suggestedPrompts}
           />
         </div>
       </main>

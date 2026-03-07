@@ -2,24 +2,34 @@
 
 import { cn } from "@/lib/utils";
 
-const SUGGESTED_PROMPTS = [
+const DEFAULT_SUGGESTED_PROMPTS = [
   "Qual sua visao sobre lideranca?",
   "Resuma seus principais ensinamentos",
   "Como aplicar suas ideias no mundo atual?",
   "Conte sobre uma experiencia transformadora",
 ];
 
+const DEFAULT_GREETING = "Explore ideias, questione estrategias, aprofunde conhecimentos";
+
 interface ChatEmptyStateProps {
   mindName: string;
   onSelectPrompt: (prompt: string) => void;
   className?: string;
+  /** Personalized greeting for this mind. Falls back to generic text. */
+  greeting?: string;
+  /** Personalized suggested prompts. Falls back to generic prompts. */
+  suggestedPrompts?: string[];
 }
 
 export default function ChatEmptyState({
   mindName,
   onSelectPrompt,
   className,
+  greeting,
+  suggestedPrompts,
 }: ChatEmptyStateProps) {
+  const displayGreeting = greeting ?? DEFAULT_GREETING;
+  const displayPrompts = suggestedPrompts ?? DEFAULT_SUGGESTED_PROMPTS;
   return (
     <div
       className={cn(
@@ -49,12 +59,12 @@ export default function ChatEmptyState({
         Converse com {mindName}
       </h2>
       <p className="text-sm text-gray-400 max-w-md mb-8">
-        Explore ideias, questione estrategias, aprofunde conhecimentos
+        {displayGreeting}
       </p>
 
       {/* Suggested prompts */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-        {SUGGESTED_PROMPTS.map((prompt) => (
+        {displayPrompts.map((prompt) => (
           <button
             key={prompt}
             onClick={() => onSelectPrompt(prompt)}

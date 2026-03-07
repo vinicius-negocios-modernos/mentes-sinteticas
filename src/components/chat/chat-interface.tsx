@@ -45,6 +45,10 @@ interface ChatInterfaceProps {
   mindDescription?: string;
   initialMessages?: ChatMessageType[];
   initialConversationId?: string;
+  /** Personalized greeting for this mind (passed to ChatEmptyState) */
+  greeting?: string;
+  /** Personalized suggested prompts for this mind (passed to ChatEmptyState) */
+  suggestedPrompts?: string[];
 }
 
 export default function ChatInterface({
@@ -52,6 +56,8 @@ export default function ChatInterface({
   mindDescription,
   initialMessages,
   initialConversationId,
+  greeting,
+  suggestedPrompts,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessageType[]>(
     initialMessages ?? [
@@ -69,6 +75,7 @@ export default function ChatInterface({
   );
   const [streamingText, setStreamingText] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [tokenWarning, setTokenWarning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -185,6 +192,12 @@ export default function ChatInterface({
         const url = new URL(window.location.href);
         url.searchParams.set("conversation", newConversationId);
         window.history.replaceState({}, "", url.toString());
+      }
+
+      // Check token usage warning header
+      const usageWarning = response.headers.get("X-Token-Usage-Warning");
+      if (usageWarning === "approaching-limit") {
+        setTokenWarning(true);
       }
 
       // Read streaming response
@@ -312,6 +325,19 @@ export default function ChatInterface({
       )}
     >
       <div className="flex flex-col h-[calc(100dvh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl overflow-hidden animate-in fade-in duration-500">
+        {/* Token usage warning banner */}
+        {tokenWarning && (
+          <div className="flex items-center justify-between gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-xs">
+            <span>Voce usou mais de 80% do seu limite diario de tokens.</span>
+            <button
+              onClick={() => setTokenWarning(false)}
+              className="text-amber-400 hover:text-amber-200 shrink-0"
+              aria-label="Fechar aviso"
+            >
+              x
+            </button>
+          </div>
+        )}
         {/* Messages Area */}
         <div className="relative flex-1 overflow-hidden">
           <ScrollArea className="h-full">
@@ -319,6 +345,8 @@ export default function ChatInterface({
               <ChatEmptyState
                 mindName={mindName}
                 onSelectPrompt={handleSelectPrompt}
+                greeting={greeting}
+                suggestedPrompts={suggestedPrompts}
               />
             ) : (
               <div className="p-6 space-y-6" role="log" aria-live="polite" aria-relevant="additions" aria-label={`Mensagens da conversa com ${mindName}`}>
