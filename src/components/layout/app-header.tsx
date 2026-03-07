@@ -35,7 +35,7 @@ export default function AppHeader({ mindName, backHref, className }: AppHeaderPr
       {backHref && (
         <Link
           href={backHref}
-          className="text-sm text-gray-500 hover:text-white transition-colors min-h-11 min-w-11 flex items-center justify-center px-3"
+          className="text-sm text-muted-foreground hover:text-white transition-colors min-h-11 min-w-11 flex items-center justify-center px-3"
         >
           Encerrar Sessao
         </Link>

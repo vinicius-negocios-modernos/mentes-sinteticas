@@ -68,7 +68,7 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
         <ChatHeader mindName={decodedName} mindDescription={mindDescription} backHref="/" className="flex-1" />
       </div>
 
-      <main className="flex-1 w-full flex gap-4">
+      <main id="main-content" className="flex-1 w-full flex gap-4">
         {/* Conversation Sidebar */}
         <aside className="hidden md:flex flex-col w-64 shrink-0">
           <h2 className="text-sm font-semibold text-gray-400 mb-3 px-1">

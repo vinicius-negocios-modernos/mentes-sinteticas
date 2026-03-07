@@ -74,7 +74,7 @@ export default function ConversationList({
         </Button>
 
         {conversations.length === 0 && (
-          <p className="text-xs text-gray-500 px-2 py-1">
+          <p className="text-xs text-muted-foreground px-2 py-1">
             Nenhuma conversa anterior.
           </p>
         )}
@@ -98,13 +98,13 @@ export default function ConversationList({
               </span>
               <button
                 onClick={(e) => handleDelete(e, conv.id)}
-                className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-opacity text-xs shrink-0 min-h-11 min-w-11 flex items-center justify-center"
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity text-xs shrink-0 min-h-11 min-w-11 flex items-center justify-center"
                 title="Excluir conversa"
               >
                 X
               </button>
             </div>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {formatDate(conv.updatedAt)}
             </span>
           </button>

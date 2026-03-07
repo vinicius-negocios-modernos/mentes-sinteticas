@@ -39,23 +39,26 @@ interface ChatMessageLoadingProps {
 export function ChatMessageLoading({ className }: ChatMessageLoadingProps) {
   return (
     <div className={cn("flex justify-start gap-3", className)}>
-      <Avatar className="bg-purple-600/30 shrink-0 mt-1">
+      <Avatar className="bg-purple-600/30 shrink-0 mt-1" aria-hidden="true">
         <AvatarFallback className="bg-purple-600/30 text-purple-200 text-xs">
           ...
         </AvatarFallback>
       </Avatar>
-      <div className="bg-gray-800/40 p-4 rounded-2xl rounded-bl-none flex gap-2 items-center">
+      <div className="bg-gray-800/40 p-4 rounded-2xl rounded-bl-none flex gap-2 items-center" aria-label="A mente esta respondendo" role="status">
         <div
           className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
           style={{ animationDelay: "0ms" }}
+          aria-hidden="true"
         />
         <div
           className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
           style={{ animationDelay: "150ms" }}
+          aria-hidden="true"
         />
         <div
           className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
           style={{ animationDelay: "300ms" }}
+          aria-hidden="true"
         />
       </div>
     </div>
@@ -93,7 +96,10 @@ export default function ChatMessage({
       )}
     >
       {/* Avatar */}
-      <Avatar className={cn("shrink-0 mt-1", isUser ? "bg-cyan-600/30" : "bg-purple-600/30")}>
+      <Avatar
+        className={cn("shrink-0 mt-1", isUser ? "bg-cyan-600/30" : "bg-purple-600/30")}
+        aria-label={isUser ? "Avatar do usuario" : mindName ? `Avatar de ${mindName}` : "Avatar da mente"}
+      >
         <AvatarFallback
           className={cn(
             "text-xs font-semibold",
@@ -101,6 +107,7 @@ export default function ChatMessage({
               ? "bg-cyan-600/30 text-cyan-200"
               : "bg-purple-600/30 text-purple-200"
           )}
+          aria-hidden="true"
         >
           {isUser ? "EU" : mindName ? getInitials(mindName) : "MS"}
         </AvatarFallback>
@@ -166,7 +173,7 @@ export default function ChatMessage({
 
         {/* Timestamp */}
         {timestamp && (
-          <span className="text-xs text-gray-500 mt-1.5 px-1">
+          <span className="text-xs text-muted-foreground mt-1.5 px-1">
             {formatTimestamp(timestamp)}
           </span>
         )}

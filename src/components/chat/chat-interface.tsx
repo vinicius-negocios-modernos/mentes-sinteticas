@@ -299,7 +299,7 @@ export default function ChatInterface({
       fallback={({ reset }) => (
         <div className="flex flex-col items-center justify-center h-[calc(100dvh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl p-8 text-center">
           <p className="text-red-400 text-lg mb-2">Erro no chat</p>
-          <p className="text-gray-400 text-sm mb-4">
+          <p className="text-muted-foreground text-sm mb-4">
             Ocorreu um erro na interface de chat. Tente reconectar.
           </p>
           <button
@@ -321,7 +321,7 @@ export default function ChatInterface({
                 onSelectPrompt={handleSelectPrompt}
               />
             ) : (
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6" role="log" aria-live="polite" aria-relevant="additions" aria-label={`Mensagens da conversa com ${mindName}`}>
                 {messages.map((msg, idx) => (
                   <ChatMessage
                     key={idx}
@@ -340,10 +340,12 @@ export default function ChatInterface({
                   />
                 )}
                 {/* Show loading indicator when waiting for first token */}
-                {isLoading &&
-                  (streamingText === null || streamingText.length === 0) && (
-                    <ChatMessageLoading />
-                  )}
+                <div role="status" aria-live="polite" aria-label={isLoading && (streamingText === null || streamingText.length === 0) ? "A mente esta respondendo..." : undefined}>
+                  {isLoading &&
+                    (streamingText === null || streamingText.length === 0) && (
+                      <ChatMessageLoading />
+                    )}
+                </div>
                 <div ref={messagesEndRef} />
               </div>
             )}

@@ -68,7 +68,7 @@ export default function ChatHeader({
       <Button
         variant="ghost"
         asChild
-        className="text-sm text-gray-500 hover:text-white shrink-0"
+        className="text-sm text-muted-foreground hover:text-white shrink-0"
       >
         <Link href={backHref}>Encerrar Sessao</Link>
       </Button>

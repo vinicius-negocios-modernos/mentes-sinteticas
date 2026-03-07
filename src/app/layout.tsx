@@ -48,6 +48,12 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} safe-area-top safe-area-x`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-background focus:text-foreground focus:p-4 focus:rounded-md focus:ring-2 focus:ring-ring"
+        >
+          Pular para conteudo principal
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -55,7 +61,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           {user && (
-            <nav className="fixed top-0 right-0 z-50 p-2 sm:p-4 flex items-center gap-2 sm:gap-4">
+            <nav aria-label="Conta do usuario" className="fixed top-0 right-0 z-50 p-2 sm:p-4 flex items-center gap-2 sm:gap-4">
               <span className="text-xs text-gray-400 truncate max-w-[120px] sm:max-w-[200px] hidden sm:inline">
                 {user.email}
               </span>

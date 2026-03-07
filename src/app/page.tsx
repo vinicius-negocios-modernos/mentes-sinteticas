@@ -10,7 +10,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-[100dvh] p-4 pb-20 sm:p-8 md:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-6 sm:gap-8 row-start-2 items-center sm:items-start max-w-4xl mx-auto">
+      <main id="main-content" className="flex flex-col gap-6 sm:gap-8 row-start-2 items-center sm:items-start max-w-4xl mx-auto">
 
         {/* Header */}
         <AppHeader />
@@ -26,7 +26,7 @@ export default async function Home() {
           >
             <div className="flex flex-wrap gap-2">
               {minds.length === 0 ? (
-                <span className="text-xs text-gray-500">Nenhuma mente encontrada</span>
+                <span className="text-xs text-muted-foreground">Nenhuma mente encontrada</span>
               ) : (
                 minds.map(mind => (
                   <MindTag

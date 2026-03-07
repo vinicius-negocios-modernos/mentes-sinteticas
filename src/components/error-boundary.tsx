@@ -99,7 +99,7 @@ function DefaultFallback({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Se o problema persistir, tente recarregar a pagina.
         </p>
       </CardContent>

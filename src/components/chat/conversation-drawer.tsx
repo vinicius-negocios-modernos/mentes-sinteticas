@@ -53,7 +53,7 @@ export default function ConversationDrawer({
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-4 bg-background">
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-sm font-semibold text-gray-400">
+          <SheetTitle className="text-sm font-semibold text-muted-foreground">
             Conversas
           </SheetTitle>
         </SheetHeader>

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardDescription, CardContent } from "@/components/ui/card";
 
 interface MindCardProps {
   title: string;
@@ -23,20 +23,21 @@ export default function MindCard({
 
   return (
     <Card
+      role="article"
       className={cn(
         "glass-panel rounded-2xl border-0 p-0 transition-transform hover:scale-[1.02] cursor-pointer group",
         className
       )}
     >
       <CardHeader className="p-8 pb-0">
-        <CardTitle
+        <h2
           className={cn(
-            "text-2xl font-semibold transition-colors",
+            "text-2xl font-semibold transition-colors leading-none",
             hoverClass
           )}
         >
           {title}
-        </CardTitle>
+        </h2>
         <CardDescription className="text-gray-400 mt-2">
           {description}
         </CardDescription>
