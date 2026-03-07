@@ -6,6 +6,7 @@ import { deleteConversation } from "@/app/actions";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import EmptyState from "@/components/ui/empty-state";
 import type { Conversation } from "@/db/schema";
 
 interface ConversationListProps {
@@ -74,9 +75,16 @@ export default function ConversationList({
         </Button>
 
         {conversations.length === 0 && (
-          <p className="text-xs text-muted-foreground px-2 py-1">
-            Nenhuma conversa anterior.
-          </p>
+          <EmptyState
+            compact
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            }
+            title="Nenhuma conversa ainda"
+            description="Inicie um dialogo com esta mente para explorar novas ideias."
+          />
         )}
 
         {conversations.map((conv) => (

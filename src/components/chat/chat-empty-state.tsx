@@ -37,12 +37,12 @@ export default function ChatEmptyState({
         className
       )}
     >
-      {/* Thematic icon */}
-      <div className="w-16 h-16 rounded-full bg-purple-600/20 border border-purple-500/30 flex items-center justify-center mb-6">
+      {/* Dark Academia thematic icon -- quill & constellation */}
+      <div className="relative w-20 h-20 rounded-full bg-purple-600/15 border border-purple-500/20 flex items-center justify-center mb-6">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          width="28"
-          height="28"
+          width="32"
+          height="32"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -51,14 +51,20 @@ export default function ChatEmptyState({
           strokeLinejoin="round"
           className="text-purple-400"
         >
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+          <path d="M5 3v4" />
+          <path d="M19 17v4" />
+          <path d="M3 5h4" />
+          <path d="M17 19h4" />
         </svg>
+        {/* Subtle glow */}
+        <div className="absolute inset-0 rounded-full bg-purple-500/5 blur-xl" aria-hidden="true" />
       </div>
 
       <h2 className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-cyan-400 mb-2">
         Converse com {mindName}
       </h2>
-      <p className="text-sm text-gray-400 max-w-md mb-8">
+      <p className="text-sm text-muted-foreground max-w-md mb-8">
         {displayGreeting}
       </p>
 
@@ -68,9 +74,9 @@ export default function ChatEmptyState({
           <button
             key={prompt}
             onClick={() => onSelectPrompt(prompt)}
-            className="text-left p-4 rounded-xl bg-black/30 border border-white/10 hover:border-purple-500/40 hover:bg-purple-600/10 transition-all duration-200 group"
+            className="text-left p-4 rounded-xl bg-black/30 border border-purple-500/10 hover:border-purple-500/40 hover:bg-purple-600/10 transition-all duration-200 group min-h-11"
           >
-            <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+            <span className="text-sm text-muted-foreground group-hover:text-white transition-colors">
               {prompt}
             </span>
           </button>

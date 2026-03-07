@@ -6,6 +6,8 @@ import AppFooter from "@/components/layout/app-footer";
 import MindCard from "@/components/minds/mind-card";
 import MindTag from "@/components/minds/mind-tag";
 import { MindCardSkeleton } from "@/components/skeletons/mind-card-skeleton";
+import OnboardingWrapper from "@/components/onboarding/onboarding-wrapper";
+import HomeEmptyState from "@/components/home-empty-state";
 
 /**
  * Async Server Component that fetches and renders mind cards.
@@ -74,15 +76,21 @@ export default function Home() {
         <AppHeader />
 
         {/* Action Grid */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div id="minds-grid" className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <Suspense fallback={<MindCardsFallback />}>
             <MindCardsGrid />
           </Suspense>
         </div>
 
+        {/* Home empty state CTA -- always visible as encouragement for new users */}
+        <HomeEmptyState />
+
       </main>
 
       <AppFooter />
+
+      {/* Onboarding dialog -- shown only on first visit */}
+      <OnboardingWrapper />
     </div>
   );
 }
