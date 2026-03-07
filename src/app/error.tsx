@@ -10,7 +10,7 @@ export default function GlobalError({
     reset: () => void;
 }) {
     return (
-        <div className="min-h-screen flex items-center justify-center p-8 font-[family-name:var(--font-geist-sans)]"
+        <div className="min-h-[100dvh] flex items-center justify-center p-8 font-[family-name:var(--font-geist-sans)]"
              style={{ background: "radial-gradient(circle at 50% 0%, #1e1b4b 0%, #030014 60%)" }}>
             <div className="glass-panel rounded-2xl p-8 max-w-md text-center">
                 <h1 className="text-3xl font-bold mb-4 text-red-400">Algo deu errado</h1>

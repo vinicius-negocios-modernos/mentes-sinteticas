@@ -297,7 +297,7 @@ export default function ChatInterface({
     <ErrorBoundary
       variant="inline"
       fallback={({ reset }) => (
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl p-8 text-center">
+        <div className="flex flex-col items-center justify-center h-[calc(100dvh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl p-8 text-center">
           <p className="text-red-400 text-lg mb-2">Erro no chat</p>
           <p className="text-gray-400 text-sm mb-4">
             Ocorreu um erro na interface de chat. Tente reconectar.
@@ -311,7 +311,7 @@ export default function ChatInterface({
         </div>
       )}
     >
-      <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl overflow-hidden animate-in fade-in duration-500">
+      <div className="flex flex-col h-[calc(100dvh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl overflow-hidden animate-in fade-in duration-500">
         {/* Messages Area */}
         <div className="relative flex-1 overflow-hidden">
           <ScrollArea className="h-full">
@@ -361,7 +361,7 @@ export default function ChatInterface({
               variant="ghost"
               size="sm"
               onClick={() => scrollToBottom("smooth")}
-              className="h-9 w-9 rounded-full bg-purple-600/50 hover:bg-purple-600/70 border border-purple-500/40 text-white shadow-lg backdrop-blur-sm p-0"
+              className="h-11 w-11 rounded-full bg-purple-600/50 hover:bg-purple-600/70 border border-purple-500/40 text-white shadow-lg backdrop-blur-sm p-0"
               aria-label="Ir para o final"
             >
               <svg

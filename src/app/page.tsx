@@ -9,14 +9,14 @@ export default async function Home() {
   const minds = await getMindsList();
 
   return (
-    <div className="min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start max-w-4xl mx-auto">
+    <div className="min-h-[100dvh] p-4 pb-20 sm:p-8 md:p-20 font-[family-name:var(--font-geist-sans)]">
+      <main className="flex flex-col gap-6 sm:gap-8 row-start-2 items-center sm:items-start max-w-4xl mx-auto">
 
         {/* Header */}
         <AppHeader />
 
         {/* Action Grid */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
 
           {/* Card 1: Select Thinker */}
           <MindCard

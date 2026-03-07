@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
     return (
-        <div className="min-h-screen flex items-center justify-center p-8 font-[family-name:var(--font-geist-sans)]">
+        <div className="min-h-[100dvh] flex items-center justify-center p-8 font-[family-name:var(--font-geist-sans)]">
             <div className="glass-panel rounded-2xl p-8 max-w-md text-center">
                 <h1 className="text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">404</h1>
                 <h2 className="text-2xl font-semibold mb-2 text-white">Mente nao encontrada</h2>

@@ -48,7 +48,7 @@ export default function ChatInput({
   };
 
   return (
-    <div className={cn("p-4 border-t border-white/5 bg-black/20 backdrop-blur-md", className)}>
+    <div className={cn("p-4 border-t border-white/5 bg-black/20 backdrop-blur-md safe-area-bottom", className)}>
       <div className="flex gap-2 items-end">
         <Textarea
           ref={textareaRef}
@@ -58,7 +58,7 @@ export default function ChatInput({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className="flex-1 min-h-[44px] max-h-[150px] resize-none overflow-y-auto bg-black/30 border-white/10 rounded-xl px-4 py-3 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50 text-white placeholder-gray-500 field-sizing-fixed"
+          className="flex-1 min-h-[44px] max-h-[150px] resize-none overflow-y-auto bg-black/30 border-white/10 rounded-xl px-4 py-3 text-base focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50 text-white placeholder-gray-500 field-sizing-fixed"
         />
         <Button
           onClick={onSend}

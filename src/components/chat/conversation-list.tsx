@@ -85,7 +85,7 @@ export default function ConversationList({
             onClick={() => handleSelect(conv.id)}
             disabled={isPending || deletingId === conv.id}
             className={cn(
-              "group w-full px-3 py-2 text-left text-sm rounded-lg border transition-colors",
+              "group w-full px-3 py-3 text-left text-sm rounded-lg border transition-colors min-h-11",
               conv.id === activeConversationId
                 ? "bg-purple-600/30 border-purple-500/50 text-white"
                 : "bg-gray-800/30 border-gray-700/30 text-gray-300 hover:bg-gray-800/50 hover:border-gray-600/50",
@@ -98,7 +98,7 @@ export default function ConversationList({
               </span>
               <button
                 onClick={(e) => handleDelete(e, conv.id)}
-                className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-opacity text-xs shrink-0"
+                className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-opacity text-xs shrink-0 min-h-11 min-w-11 flex items-center justify-center"
                 title="Excluir conversa"
               >
                 X

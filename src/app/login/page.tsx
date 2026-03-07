@@ -35,7 +35,7 @@ export default async function LoginPage({
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 font-[family-name:var(--font-geist-sans)]">
+        <div className="min-h-[100dvh] flex items-center justify-center p-4 font-[family-name:var(--font-geist-sans)]">
             <Card className="glass-panel rounded-2xl border-0 w-full max-w-md">
                 <CardHeader className="text-center">
                     <CardTitle className="text-3xl font-bold text-gradient">
@@ -64,7 +64,7 @@ export default async function LoginPage({
                                 type="email"
                                 required
                                 autoComplete="email"
-                                className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
+                                className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-base text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
                                 placeholder="seu@email.com"
                             />
                         </div>
@@ -79,7 +79,7 @@ export default async function LoginPage({
                                 type="password"
                                 required
                                 autoComplete="current-password"
-                                className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
+                                className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-base text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
                                 placeholder="Sua senha"
                             />
                         </div>

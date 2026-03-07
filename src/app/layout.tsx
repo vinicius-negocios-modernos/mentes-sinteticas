@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -18,6 +18,12 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "Mentes Sinteticas",
@@ -41,7 +47,7 @@ export default async function RootLayout({
 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} safe-area-top safe-area-x`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -49,14 +55,14 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           {user && (
-            <nav className="fixed top-0 right-0 z-50 p-4 flex items-center gap-4">
-              <span className="text-xs text-gray-400 truncate max-w-[200px]">
+            <nav className="fixed top-0 right-0 z-50 p-2 sm:p-4 flex items-center gap-2 sm:gap-4">
+              <span className="text-xs text-gray-400 truncate max-w-[120px] sm:max-w-[200px] hidden sm:inline">
                 {user.email}
               </span>
               <form action={signOut}>
                 <button
                   type="submit"
-                  className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+                  className="text-xs px-3 py-2.5 min-h-11 min-w-11 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
                 >
                   Sair
                 </button>

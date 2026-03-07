@@ -3,6 +3,7 @@ import { getMindByName } from "@/lib/services/minds";
 import ChatHeader from "@/components/chat/chat-header";
 import ChatInterface from "@/components/chat/chat-interface";
 import ConversationList from "@/components/chat/conversation-list";
+import ConversationDrawer from "@/components/chat/conversation-drawer";
 import { ErrorBoundary } from "@/components/error-boundary";
 import type { ChatMessage } from "@/lib/types";
 import Link from "next/link";
@@ -22,7 +23,7 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
 
   if (!isValidMind) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8 font-[family-name:var(--font-geist-sans)]">
+      <div className="min-h-[100dvh] flex items-center justify-center p-8 font-[family-name:var(--font-geist-sans)]">
         <h1 className="text-2xl text-red-500">
           Mente nao encontrada: {decodedName}
         </h1>
@@ -57,8 +58,15 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 font-[family-name:var(--font-geist-sans)] flex flex-col">
-      <ChatHeader mindName={decodedName} mindDescription={mindDescription} backHref="/" />
+    <div className="min-h-[100dvh] p-2 sm:p-4 md:p-8 font-[family-name:var(--font-geist-sans)] flex flex-col">
+      <div className="flex items-center gap-2">
+        <ConversationDrawer
+          conversations={conversations}
+          mindId={decodedName}
+          activeConversationId={activeConversationId}
+        />
+        <ChatHeader mindName={decodedName} mindDescription={mindDescription} backHref="/" className="flex-1" />
+      </div>
 
       <main className="flex-1 w-full flex gap-4">
         {/* Conversation Sidebar */}

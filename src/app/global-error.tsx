@@ -16,7 +16,7 @@ export default function GlobalError({
 
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-gray-950 flex items-center justify-center p-8">
+      <body className="min-h-[100dvh] bg-gray-950 flex items-center justify-center p-8">
         <div className="max-w-md w-full rounded-lg border border-red-900/30 bg-gray-900/80 p-6 text-center">
           <h2 className="text-lg font-semibold text-red-400 mb-2">
             Algo deu errado
