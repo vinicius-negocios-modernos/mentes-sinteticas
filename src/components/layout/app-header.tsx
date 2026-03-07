@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 interface AppHeaderProps {
   mindName?: string;
@@ -24,11 +25,10 @@ export default function AppHeader({ mindName, backHref, className }: AppHeaderPr
               WebkitTextFillColor: "transparent",
             }}
           >
-            Mentes Sinteticas
+            {t("home.heroTitle")}
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl">
-            Acesse a sabedoria acumulada da humanidade. Converse com clones
-            digitais gerados via arquitetura cognitiva avancada.
+            {t("home.heroSubtitle")}
           </p>
         </div>
       )}
@@ -37,7 +37,7 @@ export default function AppHeader({ mindName, backHref, className }: AppHeaderPr
           href={backHref}
           className="text-sm text-muted-foreground hover:text-white transition-colors min-h-11 min-w-11 flex items-center justify-center px-3"
         >
-          Encerrar Sessao
+          {t("chat.endSession")}
         </Link>
       )}
     </header>

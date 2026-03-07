@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
 import { Card, CardHeader, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,10 +40,10 @@ export default async function SignupPage({
             <Card className="glass-panel rounded-2xl border-0 w-full max-w-md">
                 <CardHeader className="text-center">
                     <h1 className="text-3xl font-bold text-gradient leading-none">
-                        Criar Conta
+                        {t("auth.signupTitle")}
                     </h1>
                     <CardDescription className="text-gray-400 text-sm">
-                        Junte-se as Mentes Sinteticas
+                        {t("auth.signupDescription")}
                     </CardDescription>
                 </CardHeader>
 
@@ -55,7 +56,7 @@ export default async function SignupPage({
 
                     {success && (
                         <div role="status" className="mb-6 p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-green-300 text-sm">
-                            Conta criada! Verifique seu email para confirmar o cadastro.
+                            {t("auth.signupSuccess")}
                         </div>
                     )}
 
@@ -63,7 +64,7 @@ export default async function SignupPage({
                         <form action={signUp} className="flex flex-col gap-4">
                             <div>
                                 <label htmlFor="email" className="block text-sm text-gray-400 mb-1">
-                                    Email
+                                    {t("auth.email")}
                                 </label>
                                 <Input
                                     id="email"
@@ -73,13 +74,13 @@ export default async function SignupPage({
                                     autoComplete="email"
                                     aria-describedby={error ? "form-error" : undefined}
                                     className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-base text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
-                                    placeholder="seu@email.com"
+                                    placeholder={t("auth.emailPlaceholder")}
                                 />
                             </div>
 
                             <div>
                                 <label htmlFor="password" className="block text-sm text-gray-400 mb-1">
-                                    Senha
+                                    {t("auth.password")}
                                 </label>
                                 <Input
                                     id="password"
@@ -90,7 +91,7 @@ export default async function SignupPage({
                                     autoComplete="new-password"
                                     aria-describedby={error ? "form-error" : undefined}
                                     className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-base text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
-                                    placeholder="Minimo 6 caracteres"
+                                    placeholder={t("auth.passwordMinLength")}
                                 />
                             </div>
 
@@ -98,7 +99,7 @@ export default async function SignupPage({
                                 type="submit"
                                 className="w-full py-3 h-auto rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium mt-2"
                             >
-                                Criar Conta
+                                {t("auth.signupButton")}
                             </Button>
                         </form>
                     )}
@@ -106,9 +107,9 @@ export default async function SignupPage({
 
                 <CardFooter className="justify-center">
                     <p className="text-muted-foreground text-sm">
-                        Ja tem conta?{" "}
+                        {t("auth.hasAccount")}{" "}
                         <Link href="/login" className="text-purple-400 hover:text-purple-300 transition-colors">
-                            Entrar
+                            {t("auth.goToLogin")}
                         </Link>
                     </p>
                 </CardFooter>

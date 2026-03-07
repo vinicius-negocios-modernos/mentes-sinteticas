@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { t } from "@/lib/i18n";
 import { Card, CardHeader, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,10 +40,10 @@ export default async function LoginPage({
             <Card className="glass-panel rounded-2xl border-0 w-full max-w-md">
                 <CardHeader className="text-center">
                     <h1 className="text-3xl font-bold text-gradient leading-none">
-                        Entrar
+                        {t("auth.loginTitle")}
                     </h1>
                     <CardDescription className="text-gray-400 text-sm">
-                        Entre para acessar suas conversas
+                        {t("auth.loginDescription")}
                     </CardDescription>
                 </CardHeader>
 
@@ -56,7 +57,7 @@ export default async function LoginPage({
                     <form action={signIn} className="flex flex-col gap-4">
                         <div>
                             <label htmlFor="email" className="block text-sm text-gray-400 mb-1">
-                                Email
+                                {t("auth.email")}
                             </label>
                             <Input
                                 id="email"
@@ -66,13 +67,13 @@ export default async function LoginPage({
                                 autoComplete="email"
                                 aria-describedby={error ? "form-error" : undefined}
                                 className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-base text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
-                                placeholder="seu@email.com"
+                                placeholder={t("auth.emailPlaceholder")}
                             />
                         </div>
 
                         <div>
                             <label htmlFor="password" className="block text-sm text-gray-400 mb-1">
-                                Senha
+                                {t("auth.password")}
                             </label>
                             <Input
                                 id="password"
@@ -82,7 +83,7 @@ export default async function LoginPage({
                                 autoComplete="current-password"
                                 aria-describedby={error ? "form-error" : undefined}
                                 className="w-full px-4 py-3 h-auto rounded-lg bg-white/5 border-white/10 text-base text-white placeholder-gray-500 focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50"
-                                placeholder="Sua senha"
+                                placeholder={t("auth.passwordPlaceholder")}
                             />
                         </div>
 
@@ -90,16 +91,16 @@ export default async function LoginPage({
                             type="submit"
                             className="w-full py-3 h-auto rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium mt-2"
                         >
-                            Entrar
+                            {t("auth.loginButton")}
                         </Button>
                     </form>
                 </CardContent>
 
                 <CardFooter className="justify-center">
                     <p className="text-muted-foreground text-sm">
-                        Nao tem conta?{" "}
+                        {t("auth.noAccount")}{" "}
                         <Link href="/signup" className="text-purple-400 hover:text-purple-300 transition-colors">
-                            Criar conta
+                            {t("auth.createAccount")}
                         </Link>
                     </p>
                 </CardFooter>

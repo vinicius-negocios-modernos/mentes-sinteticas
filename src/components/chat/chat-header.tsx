@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -100,7 +101,7 @@ export default function ChatHeader({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
             </span>
-            <span className="text-xs text-green-400 hidden sm:inline">Online</span>
+            <span className="text-xs text-green-400 hidden sm:inline">{t("chat.onlineStatus")}</span>
           </span>
         </div>
         <div className="flex items-center gap-3 mt-0.5">
@@ -131,7 +132,7 @@ export default function ChatHeader({
         asChild
         className="text-sm text-muted-foreground hover:text-white shrink-0"
       >
-        <Link href={backHref}>Encerrar Sessao</Link>
+        <Link href={backHref}>{t("chat.endSession")}</Link>
       </Button>
     </header>
   );

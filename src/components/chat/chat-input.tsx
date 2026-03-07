@@ -2,6 +2,8 @@
 
 import { useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
+import { triggerHaptic } from "@/lib/haptics";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +22,7 @@ export default function ChatInput({
   onChange,
   onSend,
   disabled = false,
-  placeholder = "Digite sua questao estrategica...",
+  placeholder = t("chat.inputPlaceholder"),
   helperText,
   className,
 }: ChatInputProps) {
@@ -43,6 +45,7 @@ export default function ChatInput({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      triggerHaptic("confirm");
       onSend();
     }
   };
@@ -58,16 +61,19 @@ export default function ChatInput({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          aria-label="Digite sua mensagem"
+          aria-label={t("chat.inputAriaLabel")}
           className="flex-1 min-h-[44px] max-h-[150px] resize-none overflow-y-auto bg-black/30 border-white/10 rounded-xl px-4 py-3 text-base focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50 text-white placeholder-gray-500 field-sizing-fixed"
         />
         <Button
-          onClick={onSend}
+          onClick={() => {
+            triggerHaptic("confirm");
+            onSend();
+          }}
           disabled={disabled || !value.trim()}
-          aria-label="Enviar mensagem"
+          aria-label={t("chat.sendAriaLabel")}
           className="px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-medium h-[44px] shrink-0 disabled:opacity-40"
         >
-          Enviar
+          {t("chat.send")}
         </Button>
       </div>
       {helperText && (

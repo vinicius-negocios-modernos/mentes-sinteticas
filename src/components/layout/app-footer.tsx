@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 interface AppFooterProps {
   className?: string;
@@ -7,7 +8,7 @@ interface AppFooterProps {
 export default function AppFooter({ className }: AppFooterProps) {
   return (
     <footer className={cn("fixed bottom-4 w-full text-center text-muted-foreground text-sm", className)}>
-      Construido com Google Gemini 2.0 Flash &amp; File API
+      {t("footer.builtWith")}
     </footer>
   );
 }
