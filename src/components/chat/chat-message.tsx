@@ -85,6 +85,7 @@ export default function ChatMessage({
 
   return (
     <div
+      data-role={role}
       className={cn(
         "group flex gap-3",
         isUser ? "flex-row-reverse" : "flex-row",
