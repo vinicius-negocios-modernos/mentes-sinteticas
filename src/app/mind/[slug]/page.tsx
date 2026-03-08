@@ -14,19 +14,8 @@ import { getConversationStarters } from "@/data/conversation-starters";
 const BASE_URL =
   process.env.NEXT_PUBLIC_APP_URL || "https://mentes-sinteticas.vercel.app";
 
-// ---------------------------------------------------------------------------
-// Static Generation
-// ---------------------------------------------------------------------------
-
-export async function generateStaticParams() {
-  try {
-    const minds = await listActiveMinds();
-    return minds.map((mind) => ({ slug: mind.slug }));
-  } catch {
-    // DB may not be available at build time; fall back to on-demand generation
-    return [];
-  }
-}
+// Force dynamic rendering — DB is not available at build time in Docker
+export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
 // Dynamic Metadata
