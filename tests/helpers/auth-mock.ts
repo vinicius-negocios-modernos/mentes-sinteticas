@@ -60,59 +60,6 @@ export function authMockModule() {
   };
 }
 
-/**
- * @deprecated Use authMockModule() instead. Kept for backward compatibility.
- * Mock module for `@/lib/supabase/server`.
- */
-export function authServerMockModule() {
-  return {
-    createClient: vi.fn(async () => ({
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: {
-            user: authState.session
-              ? {
-                  id: authState.session.user.id,
-                  email: authState.session.user.email,
-                  aud: "authenticated",
-                  role: "authenticated",
-                  app_metadata: {},
-                  user_metadata: {},
-                  created_at: new Date().toISOString(),
-                }
-              : null,
-          },
-          error: null,
-        })),
-      },
-    })),
-  };
-}
-
-/**
- * @deprecated Use authMockModule() instead. Kept for backward compatibility.
- * Mock module for `@supabase/ssr`.
- */
-export function authSsrMockModule() {
-  return {
-    createServerClient: vi.fn(() => ({
-      auth: {
-        getUser: vi.fn(async () => ({
-          data: {
-            user: authState.session
-              ? {
-                  id: authState.session.user.id,
-                  email: authState.session.user.email,
-                }
-              : null,
-          },
-          error: null,
-        })),
-      },
-    })),
-  };
-}
-
 // ── Convenience setters ──────────────────────────────────────────────
 
 /**

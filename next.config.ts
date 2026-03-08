@@ -8,7 +8,7 @@ const ContentSecurityPolicy = [
   "script-src 'self' 'unsafe-inline'",
   "worker-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  `connect-src 'self' *.supabase.co generativelanguage.googleapis.com *.ingest.sentry.io`,
+  `connect-src 'self' generativelanguage.googleapis.com *.ingest.sentry.io`,
   "img-src 'self' data: blob:",
   "font-src 'self'",
   "frame-ancestors 'none'",
