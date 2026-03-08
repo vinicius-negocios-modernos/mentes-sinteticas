@@ -32,20 +32,7 @@ async function ConversationSidebar({
   const conversations = await getConversations(mindName);
 
   return (
-    <ErrorBoundary
-      variant="inline"
-      fallback={({ reset }) => (
-        <div className="text-center p-4">
-          <p className="text-sm text-red-400 mb-2">Erro ao carregar conversas</p>
-          <button
-            onClick={reset}
-            className="text-xs text-purple-400 hover:underline"
-          >
-            Recarregar
-          </button>
-        </div>
-      )}
-    >
+    <ErrorBoundary variant="inline">
       <ConversationList
         conversations={conversations}
         mindId={mindName}
