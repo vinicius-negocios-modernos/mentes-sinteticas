@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { CreateDebateSchema } from "@/lib/validations/debate";
 import { createDebate } from "@/lib/services/debates";
 import {
@@ -28,21 +28,19 @@ export async function POST(request: Request) {
     const { topic, participantSlugs } = validation.data;
 
     // ── Authenticate ──────────────────────────────────────────────────
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Sessao expirada. Faca login novamente." },
         { status: 401 }
       );
     }
 
+    const userId = session.user.id;
+
     // ── Rate limit ────────────────────────────────────────────────────
-    const rateLimitResult = await checkRateLimit(user.id, "createDebate", [
+    const rateLimitResult = await checkRateLimit(userId, "createDebate", [
       { name: "per-hour", config: DEBATE_CREATE_LIMIT },
     ]);
 
@@ -57,12 +55,12 @@ export async function POST(request: Request) {
 
     // ── Create debate ─────────────────────────────────────────────────
     const { debate, participants } = await createDebate(
-      user.id,
+      userId,
       topic,
       participantSlugs
     );
 
-    await incrementRateLimit(user.id, "createDebate");
+    await incrementRateLimit(userId, "createDebate");
 
     logger.info(`[debate] Created debate ${debate.id} with ${participants.length} participants`);
 

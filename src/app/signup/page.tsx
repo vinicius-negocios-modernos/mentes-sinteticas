@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { signIn } from "@/lib/auth";
+import { AuthError } from "next-auth";
 import { t } from "@/lib/i18n";
 import { Card, CardHeader, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ export default async function SignupPage({
 }) {
     const { error, success } = await searchParams;
 
-    async function signUp(formData: FormData) {
+    async function handleSignUp(formData: FormData) {
         "use server";
 
         const email = formData.get("email");
@@ -22,17 +23,31 @@ export default async function SignupPage({
             redirect(`/signup?error=${encodeURIComponent("Email e senha sao obrigatorios.")}`);
         }
 
-        const supabase = await createClient();
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
+        // Create user via signup API
+        const res = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
         });
 
-        if (error) {
-            redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+        if (!res.ok) {
+            const data = await res.json();
+            redirect(`/signup?error=${encodeURIComponent(data.error || "Erro ao criar conta.")}`);
         }
 
-        redirect("/signup?success=true");
+        // Auto-login after successful signup
+        try {
+            await signIn("credentials", {
+                email,
+                password,
+                redirectTo: "/",
+            });
+        } catch (err) {
+            if (err instanceof AuthError) {
+                redirect(`/login?error=${encodeURIComponent("Conta criada. Faca login.")}`);
+            }
+            throw err;
+        }
     }
 
     return (
@@ -61,7 +76,7 @@ export default async function SignupPage({
                     )}
 
                     {!success && (
-                        <form action={signUp} className="flex flex-col gap-4">
+                        <form action={handleSignUp} className="flex flex-col gap-4">
                             <div>
                                 <label htmlFor="email" className="block text-sm text-gray-400 mb-1">
                                     {t("auth.email")}

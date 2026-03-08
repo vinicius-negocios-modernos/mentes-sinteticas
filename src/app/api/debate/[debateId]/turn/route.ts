@@ -1,6 +1,6 @@
 import { streamText } from "ai";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { DebateActionSchema } from "@/lib/validations/debate";
 import {
   getDebateById,
@@ -45,21 +45,19 @@ export async function POST(
     const { action, message: userMessage } = validation.data;
 
     // ── Authenticate ──────────────────────────────────────────────────
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Sessao expirada. Faca login novamente." },
         { status: 401 }
       );
     }
 
+    const userId = session.user.id;
+
     // ── Load debate ───────────────────────────────────────────────────
-    const debate = await getDebateById(debateId, user.id);
+    const debate = await getDebateById(debateId, userId);
     if (!debate) {
       return Response.json(
         { error: "Debate nao encontrado." },
@@ -224,7 +222,7 @@ export async function POST(
             usage.outputTokens ?? 0
           );
           recordUsage({
-            userId: user.id,
+            userId,
             conversationId,
             inputTokens: usage.inputTokens ?? 0,
             outputTokens: usage.outputTokens ?? 0,

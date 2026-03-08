@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { shareConversation, unshareConversation } from "@/lib/services/sharing";
 import {
   checkRateLimit,
@@ -18,21 +18,19 @@ export async function POST(
     const { id: conversationId } = await params;
 
     // Authenticate
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Sessao expirada. Faca login novamente." },
         { status: 401 }
       );
     }
 
+    const userId = session.user.id;
+
     // Rate limit: max 10 shares per hour
-    const rateLimitResult = await checkRateLimit(user.id, "shareConversation", [
+    const rateLimitResult = await checkRateLimit(userId, "shareConversation", [
       {
         name: "per-hour",
         config: { maxRequests: 10, windowSeconds: 3600 },
@@ -49,7 +47,7 @@ export async function POST(
     }
 
     // Share the conversation
-    const result = await shareConversation(conversationId, user.id);
+    const result = await shareConversation(conversationId, userId);
 
     if (!result) {
       return Response.json(
@@ -59,7 +57,7 @@ export async function POST(
     }
 
     // Increment rate limit counter
-    await incrementRateLimit(user.id, "shareConversation");
+    await incrementRateLimit(userId, "shareConversation");
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -92,20 +90,16 @@ export async function DELETE(
     const { id: conversationId } = await params;
 
     // Authenticate
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Sessao expirada. Faca login novamente." },
         { status: 401 }
       );
     }
 
-    const success = await unshareConversation(conversationId, user.id);
+    const success = await unshareConversation(conversationId, session.user.id);
 
     if (!success) {
       return Response.json(

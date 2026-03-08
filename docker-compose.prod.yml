@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  app:
+    image: ghcr.io/vinicius-negocios-modernos/mentes-sinteticas:latest
+    networks:
+      - network_swarm_public
+    environment:
+      - NODE_ENV=production
+      - NEXTAUTH_URL=https://mentes.negociosmodernos.cloud
+      - NEXT_PUBLIC_APP_URL=https://mentes.negociosmodernos.cloud
+      - DATABASE_URL=${DATABASE_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.mentes.rule=Host(`mentes.negociosmodernos.cloud`)"
+        - "traefik.http.routers.mentes.entrypoints=websecure"
+        - "traefik.http.routers.mentes.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.mentes.loadbalancer.server.port=3000"
+
+networks:
+  network_swarm_public:
+    external: true

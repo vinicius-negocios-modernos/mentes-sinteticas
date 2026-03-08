@@ -17,8 +17,9 @@ export {
 } from "./db-mock";
 
 export {
-  mockSupabaseClient,
-  mockGetUser,
+  mockAuth,
+  mockSignOut,
+  authMockModule,
   authServerMockModule,
   authSsrMockModule,
   mockAuthenticatedUser,
@@ -26,4 +27,5 @@ export {
   mockAuthError,
   resetAuthMocks,
   type MockUser,
+  type MockSession,
 } from "./auth-mock";

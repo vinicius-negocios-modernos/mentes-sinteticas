@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import {
   getDebateById,
   getDebateParticipants,
@@ -20,17 +20,14 @@ export default async function DebateViewPage({ params }: DebateViewPageProps) {
   const { debateId } = await params;
 
   // Auth check
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await auth();
 
-  if (!user) {
+  if (!session?.user) {
     redirect("/login");
   }
 
   // Load debate
-  const debate = await getDebateById(debateId, user.id);
+  const debate = await getDebateById(debateId, session.user.id);
   if (!debate) {
     redirect("/debate");
   }

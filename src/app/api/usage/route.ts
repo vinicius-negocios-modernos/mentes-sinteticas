@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import {
   getUserDailyUsage,
   getUserMonthlyUsage,
@@ -8,13 +8,9 @@ import { TOKEN_LIMITS } from "@/lib/ai/config";
 export async function GET() {
   try {
     // ── Authenticate ──────────────────────────────────────────────────
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Sessao expirada. Faca login novamente." },
         { status: 401 }
@@ -23,8 +19,8 @@ export async function GET() {
 
     // ── Fetch usage data ──────────────────────────────────────────────
     const [daily, monthly] = await Promise.all([
-      getUserDailyUsage(user.id),
-      getUserMonthlyUsage(user.id),
+      getUserDailyUsage(session.user.id),
+      getUserMonthlyUsage(session.user.id),
     ]);
 
     const dailyPercentage =

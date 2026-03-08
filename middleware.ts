@@ -1,61 +1,29 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
 
-const publicRoutes = ["/", "/login", "/signup", "/auth/callback", "/api/health", "/shared"];
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
 
-export async function middleware(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
-    });
+  const publicRoutes = [
+    "/",
+    "/login",
+    "/signup",
+    "/api/auth",
+    "/api/health",
+    "/shared",
+    "/mind",
+    "/offline",
+  ];
+  const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return request.cookies.getAll();
-                },
-                setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value }) =>
-                        request.cookies.set(name, value)
-                    );
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    });
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    );
-                },
-            },
-        }
-    );
-
-    // Refresh session - IMPORTANT: do not remove this
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
-
-    const { pathname } = request.nextUrl;
-
-    // Check if the route is public
-    const isPublicRoute = publicRoutes.some(
-        (route) => pathname === route || pathname.startsWith(route + "/")
-    ) || pathname.startsWith("/auth/");
-
-    // Redirect unauthenticated users from protected routes to /login
-    if (!user && !isPublicRoute) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/login";
-        url.searchParams.set("redirectTo", pathname);
-        return NextResponse.redirect(url);
-    }
-
-    return supabaseResponse;
-}
+  if (!req.auth && !isPublic) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return Response.redirect(loginUrl);
+  }
+});
 
 export const config = {
-    matcher: [
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-    ],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon|icons|audio|sw.js|manifest|sitemap|robots|icon.svg|opengraph).*)",
+  ],
 };

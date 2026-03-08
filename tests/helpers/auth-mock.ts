@@ -1,12 +1,13 @@
 /**
- * Supabase Auth Mock Helpers
+ * NextAuth Mock Helpers
  *
- * Provides mock factories for Supabase Auth used in:
- * - middleware.ts (createServerClient from @supabase/ssr)
- * - API routes (createClient from @/lib/supabase/server)
+ * Provides mock factories for NextAuth used in:
+ * - API routes (auth() from @/lib/auth)
+ * - Server actions (auth() from @/lib/auth)
+ * - Server components (auth() from @/lib/auth)
  *
  * Usage:
- *   vi.mock("@/lib/supabase/server", () => authServerMockModule());
+ *   vi.mock("@/lib/auth", () => authMockModule());
  *   // then in each test:
  *   mockAuthenticatedUser("user-123", "user@test.com");
  *   mockUnauthenticatedUser();
@@ -18,61 +19,97 @@ import { vi } from "vitest";
 export interface MockUser {
   id: string;
   email: string;
-  aud: string;
-  role: string;
-  app_metadata: Record<string, unknown>;
-  user_metadata: Record<string, unknown>;
-  created_at: string;
+  name?: string;
+  image?: string;
+}
+
+export interface MockSession {
+  user: MockUser;
+  expires: string;
 }
 
 // ── Internal state ───────────────────────────────────────────────────
 
 const authState: {
-  user: MockUser | null;
-  error: Error | null;
+  session: MockSession | null;
 } = {
-  user: null,
-  error: null,
+  session: null,
 };
 
-// ── Mock Supabase client ─────────────────────────────────────────────
+// ── Mock auth function ──────────────────────────────────────────────
 
-export const mockGetUser = vi.fn(async () => ({
-  data: { user: authState.user },
-  error: authState.error,
-}));
+export const mockAuth = vi.fn(async () => authState.session);
 
-export const mockSupabaseClient = {
-  auth: {
-    getUser: mockGetUser,
-  },
-};
+export const mockSignOut = vi.fn(async () => {
+  authState.session = null;
+});
 
 // ── Module factories (use with vi.mock) ──────────────────────────────
 
 /**
- * Mock module for `@/lib/supabase/server`.
- * Used by API routes (e.g., /api/chat/route.ts).
+ * Mock module for `@/lib/auth`.
+ * Used by API routes, server actions, and server components.
  *
  * Usage:
- *   vi.mock("@/lib/supabase/server", () => authServerMockModule());
+ *   vi.mock("@/lib/auth", () => authMockModule());
  */
-export function authServerMockModule() {
+export function authMockModule() {
   return {
-    createClient: vi.fn(async () => mockSupabaseClient),
+    auth: mockAuth,
+    signOut: mockSignOut,
   };
 }
 
 /**
+ * @deprecated Use authMockModule() instead. Kept for backward compatibility.
+ * Mock module for `@/lib/supabase/server`.
+ */
+export function authServerMockModule() {
+  return {
+    createClient: vi.fn(async () => ({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: {
+            user: authState.session
+              ? {
+                  id: authState.session.user.id,
+                  email: authState.session.user.email,
+                  aud: "authenticated",
+                  role: "authenticated",
+                  app_metadata: {},
+                  user_metadata: {},
+                  created_at: new Date().toISOString(),
+                }
+              : null,
+          },
+          error: null,
+        })),
+      },
+    })),
+  };
+}
+
+/**
+ * @deprecated Use authMockModule() instead. Kept for backward compatibility.
  * Mock module for `@supabase/ssr`.
- * Used by middleware.ts.
- *
- * Usage:
- *   vi.mock("@supabase/ssr", () => authSsrMockModule());
  */
 export function authSsrMockModule() {
   return {
-    createServerClient: vi.fn(() => mockSupabaseClient),
+    createServerClient: vi.fn(() => ({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: {
+            user: authState.session
+              ? {
+                  id: authState.session.user.id,
+                  email: authState.session.user.email,
+                }
+              : null,
+          },
+          error: null,
+        })),
+      },
+    })),
   };
 }
 
@@ -90,39 +127,32 @@ export function mockAuthenticatedUser(
   email: string,
   extras?: Partial<MockUser>
 ) {
-  authState.user = {
-    id: userId,
-    email,
-    aud: "authenticated",
-    role: "authenticated",
-    app_metadata: {},
-    user_metadata: {},
-    created_at: new Date().toISOString(),
-    ...extras,
+  authState.session = {
+    user: {
+      id: userId,
+      email,
+      ...extras,
+    },
+    expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   };
-  authState.error = null;
 }
 
 /**
  * Configure auth to return no user (unauthenticated).
  */
 export function mockUnauthenticatedUser() {
-  authState.user = null;
-  authState.error = null;
+  authState.session = null;
 }
 
 /**
  * Configure auth to return an error.
+ * With NextAuth, this is equivalent to returning null session.
  *
- * @param message - Error message
- * @param status - HTTP-like status code (default: 401)
+ * @param _message - Error message (kept for backward compatibility)
+ * @param _status - HTTP-like status code (kept for backward compatibility)
  */
-export function mockAuthError(message: string, status = 401) {
-  authState.user = null;
-  authState.error = Object.assign(new Error(message), {
-    status,
-    code: "auth_error",
-  });
+export function mockAuthError(_message: string, _status = 401) {
+  authState.session = null;
 }
 
 /**
@@ -130,7 +160,7 @@ export function mockAuthError(message: string, status = 401) {
  * Call this in `beforeEach` or `afterEach`.
  */
 export function resetAuthMocks() {
-  authState.user = null;
-  authState.error = null;
-  mockGetUser.mockClear();
+  authState.session = null;
+  mockAuth.mockClear();
+  mockSignOut.mockClear();
 }

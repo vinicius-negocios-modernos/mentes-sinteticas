@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
@@ -83,20 +82,13 @@ export const metadata: Metadata = {
   },
 };
 
-async function signOut() {
-  "use server";
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/");
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await auth();
+  const user = session?.user;
 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
@@ -140,7 +132,11 @@ export default async function RootLayout({
               <span className="text-xs text-gray-400 truncate max-w-[120px] sm:max-w-[200px] hidden sm:inline">
                 {user.email}
               </span>
-              <form action={signOut}>
+              <form action={async () => {
+                "use server";
+                const { signOut } = await import("@/lib/auth");
+                await signOut({ redirectTo: "/login" });
+              }}>
                 <button
                   type="submit"
                   className="text-xs px-3 py-2.5 min-h-11 min-w-11 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"

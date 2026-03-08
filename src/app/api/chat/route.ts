@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { streamMindChat, TOKEN_LIMITS, buildSystemPrompt, buildSystemPromptWithMemories } from "@/lib/ai";
 import { extractMemories } from "@/lib/ai/memory";
 import { calculateCost } from "@/lib/ai/pricing";
@@ -62,20 +62,16 @@ export async function POST(request: Request) {
     const validatedConversationId = validation.data.conversationId;
 
     // ── Step 3: Authenticate user ─────────────────────────────────
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Sessao expirada. Faca login novamente." },
         { status: 401 }
       );
     }
 
-    const userId = user.id;
+    const userId = session.user.id;
 
     // ── Step 4: Check rate limits ─────────────────────────────────
     const rateLimitResult = await checkRateLimit(userId, "sendMessage", [

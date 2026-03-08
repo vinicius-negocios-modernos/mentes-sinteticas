@@ -1,3 +1,4 @@
+export { users, type User, type NewUser } from "./users";
 export { minds, type Mind, type NewMind } from "./minds";
 export {
   knowledgeDocuments,

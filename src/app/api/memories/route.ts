@@ -5,7 +5,7 @@
  * DELETE /api/memories?mindId={id} — Delete all memories for a mind (requires { confirm: true })
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import {
   getUserMemories,
   deleteAllMemoriesForMind,
@@ -14,13 +14,9 @@ import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Autenticacao necessaria." },
         { status: 401 }
@@ -30,7 +26,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const mindId = url.searchParams.get("mindId") ?? undefined;
 
-    const memories = await getUserMemories(user.id, mindId);
+    const memories = await getUserMemories(session.user.id, mindId);
 
     return Response.json({ memories });
   } catch (error) {
@@ -47,13 +43,9 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Autenticacao necessaria." },
         { status: 401 }
@@ -79,7 +71,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const deletedCount = await deleteAllMemoriesForMind(user.id, mindId);
+    const deletedCount = await deleteAllMemoriesForMind(session.user.id, mindId);
 
     return Response.json({ deleted: deletedCount });
   } catch (error) {

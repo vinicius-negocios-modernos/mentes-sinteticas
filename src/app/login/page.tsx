@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { signIn } from "@/lib/auth";
+import { AuthError } from "next-auth";
 import { t } from "@/lib/i18n";
 import { Card, CardHeader, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,30 +10,32 @@ import { Button } from "@/components/ui/button";
 export default async function LoginPage({
     searchParams,
 }: {
-    searchParams: Promise<{ redirectTo?: string; error?: string }>;
+    searchParams: Promise<{ callbackUrl?: string; redirectTo?: string; error?: string }>;
 }) {
-    const { redirectTo, error } = await searchParams;
+    const { callbackUrl, redirectTo, error } = await searchParams;
+    const returnTo = callbackUrl || redirectTo || "/";
 
-    async function signIn(formData: FormData) {
+    async function handleSignIn(formData: FormData) {
         "use server";
 
         const email = formData.get("email");
         const password = formData.get("password");
         if (!email || typeof email !== "string" || !password || typeof password !== "string") {
-            redirect(`/login?error=${encodeURIComponent("Email e senha sao obrigatorios.")}&redirectTo=${encodeURIComponent(redirectTo || "/")}`);
+            redirect(`/login?error=${encodeURIComponent("Email e senha sao obrigatorios.")}&callbackUrl=${encodeURIComponent(returnTo)}`);
         }
 
-        const supabase = await createClient();
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-
-        if (error) {
-            redirect(`/login?error=${encodeURIComponent(error.message)}&redirectTo=${encodeURIComponent(redirectTo || "/")}`);
+        try {
+            await signIn("credentials", {
+                email,
+                password,
+                redirectTo: returnTo,
+            });
+        } catch (err) {
+            if (err instanceof AuthError) {
+                redirect(`/login?error=${encodeURIComponent("Credenciais invalidas.")}&callbackUrl=${encodeURIComponent(returnTo)}`);
+            }
+            throw err;
         }
-
-        redirect(redirectTo || "/");
     }
 
     return (
@@ -54,7 +57,7 @@ export default async function LoginPage({
                         </div>
                     )}
 
-                    <form action={signIn} className="flex flex-col gap-4">
+                    <form action={handleSignIn} className="flex flex-col gap-4">
                         <div>
                             <label htmlFor="email" className="block text-sm text-gray-400 mb-1">
                                 {t("auth.email")}

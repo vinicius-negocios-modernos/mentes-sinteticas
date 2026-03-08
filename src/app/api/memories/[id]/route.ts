@@ -4,7 +4,7 @@
  * DELETE /api/memories/{id} — Delete a specific memory
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { deleteMemory } from "@/lib/services/mind-memories";
 import { logger } from "@/lib/logger";
 
@@ -17,13 +17,9 @@ export async function DELETE(
   context: RouteContext
 ) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return Response.json(
         { error: "Autenticacao necessaria." },
         { status: 401 }
@@ -39,7 +35,7 @@ export async function DELETE(
       );
     }
 
-    const deleted = await deleteMemory(id, user.id);
+    const deleted = await deleteMemory(id, session.user.id);
 
     if (!deleted) {
       return Response.json(

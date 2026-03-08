@@ -1,7 +1,7 @@
 "use server";
 
 import { createMindChat, getAvailableMinds } from "@/lib/ai";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth";
 import { listActiveMindNames, listActiveMinds, getMindByName } from "@/lib/services/minds";
 import {
   createConversation,
@@ -156,13 +156,9 @@ export async function sendMessage(
     const validatedConversationId = validation.data.conversationId;
 
     // ── Step 2: Verify authenticated session ──────────────────────
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const session = await auth();
 
-    if (authError || !user) {
+    if (!session?.user?.id) {
       return {
         success: false,
         error: "Sessao expirada. Faca login novamente.",
@@ -170,7 +166,7 @@ export async function sendMessage(
       };
     }
 
-    const userId = user.id;
+    const userId = session.user.id;
 
     // ── Step 3: Check rate limits ─────────────────────────────────
     const rateLimitResult = await checkRateLimit(userId, "sendMessage", [
@@ -261,12 +257,9 @@ export async function getConversations(
     if (!validation.success) return [];
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await auth();
 
-  if (!user) return [];
+  if (!session?.user?.id) return [];
 
   let mindDbId: string | undefined;
   if (mindName) {
@@ -274,7 +267,7 @@ export async function getConversations(
     if (id) mindDbId = id;
   }
 
-  return listByUser(user.id, mindDbId);
+  return listByUser(session.user.id, mindDbId);
 }
 
 /**
@@ -287,14 +280,11 @@ export async function getConversationMessages(
   const validation = ConversationIdSchema.safeParse(conversationId);
   if (!validation.success) return [];
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await auth();
 
-  if (!user) return [];
+  if (!session?.user?.id) return [];
 
-  const conversation = await getConversationById(conversationId, user.id);
+  const conversation = await getConversationById(conversationId, session.user.id);
   if (!conversation) return [];
 
   return listByConversation(conversationId);
@@ -310,12 +300,9 @@ export async function deleteConversation(
   const validation = ConversationIdSchema.safeParse(conversationId);
   if (!validation.success) return false;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await auth();
 
-  if (!user) return false;
+  if (!session?.user?.id) return false;
 
-  return deleteConv(conversationId, user.id);
+  return deleteConv(conversationId, session.user.id);
 }

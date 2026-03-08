@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  authServerMockModule,
+  authMockModule,
   mockAuthenticatedUser,
   mockUnauthenticatedUser,
   resetAuthMocks,
@@ -44,7 +44,7 @@ const {
 
 // ── Mocks ─────────────────────────────────────────────────────────────
 
-vi.mock("@/lib/supabase/server", () => authServerMockModule());
+vi.mock("@/lib/auth", () => authMockModule());
 
 vi.mock("@/lib/services/rate-limiter", () => ({
   checkRateLimit: mockCheckRateLimit,
