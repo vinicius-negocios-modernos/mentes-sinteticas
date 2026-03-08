@@ -1,5 +1,7 @@
 import { auth } from "@/lib/auth";
 
+export const runtime = "nodejs";
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 

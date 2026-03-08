@@ -36,6 +36,46 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+      - name: Copy migrations to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 76.13.82.80
+          username: root
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          source: "drizzle/"
+          target: "/opt/mentes-sinteticas/"
+          overwrite: true
+
+      - name: Run database migrations
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 76.13.82.80
+          username: root
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/mentes-sinteticas
+            export $(grep -v '^#' .env | xargs)
+            PSQL="docker exec -i $(docker ps -q -f name=postgres_postgres) psql -U postgres -d mentes_sinteticas"
+
+            # Create migration tracking table if not exists
+            echo "CREATE TABLE IF NOT EXISTS __drizzle_migrations (tag TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT now());" | $PSQL
+
+            # Apply each migration in order
+            for sql_file in $(ls drizzle/[0-9]*.sql | sort); do
+              tag=$(basename "$sql_file" .sql)
+              already_applied=$(echo "SELECT count(*) FROM __drizzle_migrations WHERE tag='$tag';" | $PSQL -t | tr -d ' ')
+              if [ "$already_applied" = "0" ]; then
+                echo "Applying migration: $tag"
+                # Split on statement breakpoints and run each statement
+                sed 's/--> statement-breakpoint/\n/g' "$sql_file" | $PSQL
+                echo "INSERT INTO __drizzle_migrations (tag) VALUES ('$tag');" | $PSQL
+                echo "Migration $tag applied successfully"
+              else
+                echo "Migration $tag already applied, skipping"
+              fi
+            done
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
