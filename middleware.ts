@@ -3,8 +3,7 @@ import { auth } from "@/lib/auth";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  const publicRoutes = [
-    "/",
+  const publicPrefixes = [
     "/login",
     "/signup",
     "/api/auth",
@@ -13,7 +12,9 @@ export default auth((req) => {
     "/mind",
     "/offline",
   ];
-  const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
+  const isPublic =
+    pathname === "/" ||
+    publicPrefixes.some((prefix) => pathname.startsWith(prefix));
 
   if (!req.auth && !isPublic) {
     const loginUrl = new URL("/login", req.url);

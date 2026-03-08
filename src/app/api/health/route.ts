@@ -51,28 +51,13 @@ async function checkDatabase(): Promise<ComponentStatus> {
 async function checkAuth(): Promise<ComponentStatus> {
   const start = Date.now();
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const authSecret = process.env.AUTH_SECRET;
 
-    if (!supabaseUrl || !supabaseKey) {
-      return { status: "error", message: "Supabase credentials not configured" };
+    if (!authSecret) {
+      return { status: "error", message: "AUTH_SECRET not configured" };
     }
 
-    const response = await withTimeout(
-      fetch(`${supabaseUrl}/auth/v1/health`, {
-        headers: { apikey: supabaseKey },
-      }),
-      COMPONENT_TIMEOUT_MS
-    );
-
-    if (response.ok) {
-      return { status: "ok", latencyMs: Date.now() - start };
-    }
-    return {
-      status: "error",
-      message: `Auth service returned ${response.status}`,
-      latencyMs: Date.now() - start,
-    };
+    return { status: "ok", latencyMs: Date.now() - start };
   } catch (error) {
     return {
       status: "error",
