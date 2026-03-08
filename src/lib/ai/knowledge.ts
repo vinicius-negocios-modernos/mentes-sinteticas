@@ -7,6 +7,13 @@ import { logger } from "@/lib/logger";
 
 const MANIFEST_PATH = path.join(process.cwd(), "data", "minds_manifest.json");
 
+/**
+ * Maximum number of file URIs to send per Gemini request.
+ * Gemini free tier has aggressive rate limits on input tokens per minute.
+ * Core knowledge modules (M1-M8) are prioritized over analysis documents.
+ */
+const MAX_FILE_URIS_PER_REQUEST = 8;
+
 // ── Manifest-based file URI reading (legacy fallback) ───────────────
 
 async function readManifest(): Promise<Manifest | null> {
@@ -158,7 +165,13 @@ export async function getFileParts(
   // Try DB first
   const dbEntries = await getFileUrisFromDb(mindName);
   if (dbEntries && dbEntries.length > 0) {
-    return dbEntries.map((e) => ({
+    const cappedEntries = dbEntries.slice(0, MAX_FILE_URIS_PER_REQUEST);
+    if (dbEntries.length > MAX_FILE_URIS_PER_REQUEST) {
+      logger.info(
+        `Capped file URIs from ${dbEntries.length} to ${MAX_FILE_URIS_PER_REQUEST} for mind "${mindName}"`
+      );
+    }
+    return cappedEntries.map((e) => ({
       fileData: {
         mimeType: e.mimeType || "text/plain",
         fileUri: e.fileUri,
@@ -170,7 +183,8 @@ export async function getFileParts(
   const mindData = await getMindManifest(mindName);
   if (!mindData) return [];
 
-  return mindData.files.map((f) => ({
+  const cappedFiles = mindData.files.slice(0, MAX_FILE_URIS_PER_REQUEST);
+  return cappedFiles.map((f) => ({
     fileData: {
       mimeType: f.mimeType,
       fileUri: f.uri,
