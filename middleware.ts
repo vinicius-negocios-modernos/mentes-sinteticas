@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const publicRoutes = ["/", "/login", "/signup", "/auth/callback", "/api/health"];
+const publicRoutes = ["/", "/login", "/signup", "/auth/callback", "/api/health", "/shared"];
 
 export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -40,8 +40,8 @@ export async function middleware(request: NextRequest) {
 
     // Check if the route is public
     const isPublicRoute = publicRoutes.some(
-        (route) => pathname === route || pathname.startsWith("/auth/")
-    );
+        (route) => pathname === route || pathname.startsWith(route + "/")
+    ) || pathname.startsWith("/auth/");
 
     // Redirect unauthenticated users from protected routes to /login
     if (!user && !isPublicRoute) {

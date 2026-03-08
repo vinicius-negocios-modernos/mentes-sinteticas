@@ -1,7 +1,13 @@
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import { streamMindChat, TOKEN_LIMITS } from "@/lib/ai";
+import { streamMindChat, TOKEN_LIMITS, buildSystemPrompt, buildSystemPromptWithMemories } from "@/lib/ai";
+import { extractMemories } from "@/lib/ai/memory";
 import { calculateCost } from "@/lib/ai/pricing";
+import {
+  getRelevantMemories,
+  saveMemories,
+} from "@/lib/services/mind-memories";
+import { estimateTokenCount, estimateMessagesTokens } from "@/lib/ai/context";
 import {
   checkRateLimit,
   incrementRateLimit,
@@ -22,7 +28,7 @@ import {
 } from "@/lib/services/conversations";
 import { createMessage } from "@/lib/services/messages";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
-import { estimateMessagesTokens } from "@/lib/ai/context";
+
 import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
@@ -153,7 +159,31 @@ export async function POST(request: Request) {
       // Cleanup failure is non-critical
     });
 
-    // ── Step 8: Stream response ───────────────────────────────────
+    // ── Step 8: Fetch memories & build system prompt ──────────────
+    let systemPrompt: string | undefined;
+    let memoryTokens = 0;
+
+    if (mindDbId && userId) {
+      try {
+        const memories = await getRelevantMemories(userId, mindDbId);
+        if (memories.length > 0) {
+          systemPrompt = buildSystemPromptWithMemories(validatedMindName, memories);
+          // Estimate tokens consumed by the memories section
+          const basePrompt = buildSystemPrompt(validatedMindName);
+          memoryTokens = estimateTokenCount(systemPrompt) - estimateTokenCount(basePrompt);
+          logger.info(
+            `[memory] Injected ${memories.length} memories (~${memoryTokens} tokens) for mind ${validatedMindName}`
+          );
+        }
+      } catch (err) {
+        logger.error(
+          "Failed to fetch memories:",
+          err instanceof Error ? err : new Error(String(err))
+        );
+      }
+    }
+
+    // ── Step 9: Stream response ───────────────────────────────────
     const incomingHistory = history ?? [];
     if (incomingHistory.length > 0) {
       const estimatedTokens = estimateMessagesTokens(incomingHistory);
@@ -171,6 +201,8 @@ export async function POST(request: Request) {
           mindName: validatedMindName,
           userMessage: sanitizedMessage,
           history: history ?? [],
+          systemPrompt,
+          memoryTokens,
           onFinish: async ({ text, usage, model }) => {
             // Persist assistant response after stream completes
             if (capturedConversationId) {
@@ -198,6 +230,32 @@ export async function POST(request: Request) {
                   err instanceof Error ? err : new Error(String(err))
                 );
               });
+            }
+
+            // Extract and save memories (fire-and-forget)
+            if (mindDbId && capturedConversationId) {
+              const conversationForMemory: ModelMessage[] = [
+                ...(history ?? []),
+                { role: "user" as const, content: sanitizedMessage },
+                { role: "assistant" as const, content: text },
+              ];
+              extractMemories(validatedMindName, conversationForMemory)
+                .then((extracted) => {
+                  if (extracted.length > 0) {
+                    return saveMemories(
+                      userId,
+                      mindDbId,
+                      extracted,
+                      capturedConversationId
+                    );
+                  }
+                })
+                .catch((err) => {
+                  logger.error(
+                    "Failed to extract/save memories:",
+                    err instanceof Error ? err : new Error(String(err))
+                  );
+                });
             }
           },
         });

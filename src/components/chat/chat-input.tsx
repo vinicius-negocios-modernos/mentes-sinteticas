@@ -15,6 +15,14 @@ interface ChatInputProps {
   placeholder?: string;
   helperText?: string;
   className?: string;
+  /** Whether STT is supported and voice mode is enabled. */
+  showMicButton?: boolean;
+  /** Whether the mic is currently recording. */
+  isListening?: boolean;
+  /** Start STT recording. */
+  onStartListening?: () => void;
+  /** Stop STT recording. */
+  onStopListening?: () => void;
 }
 
 export default function ChatInput({
@@ -25,6 +33,10 @@ export default function ChatInput({
   placeholder = t("chat.inputPlaceholder"),
   helperText,
   className,
+  showMicButton = false,
+  isListening = false,
+  onStartListening,
+  onStopListening,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -64,6 +76,58 @@ export default function ChatInput({
           aria-label={t("chat.inputAriaLabel")}
           className="flex-1 min-h-[44px] max-h-[150px] resize-none overflow-y-auto bg-black/30 border-white/10 rounded-xl px-4 py-3 text-base focus-visible:border-purple-500/50 focus-visible:ring-purple-500/50 text-white placeholder-gray-500 field-sizing-fixed"
         />
+        {/* Mic button — only rendered when STT is supported and voice mode is on */}
+        {showMicButton && (
+          <Button
+            type="button"
+            onClick={() => {
+              if (isListening) {
+                onStopListening?.();
+              } else {
+                onStartListening?.();
+              }
+            }}
+            disabled={disabled}
+            aria-label={
+              isListening
+                ? t("voice.stopRecording")
+                : t("voice.startRecording")
+            }
+            aria-pressed={isListening}
+            className={cn(
+              "relative h-[44px] w-[44px] shrink-0 rounded-lg p-0 transition-colors",
+              isListening
+                ? "bg-red-600 hover:bg-red-500 text-white"
+                : "bg-white/10 hover:bg-white/20 text-gray-300"
+            )}
+          >
+            {/* Pulsing ring animation when recording */}
+            {isListening && (
+              <span
+                className="absolute inset-0 rounded-lg animate-voice-pulse"
+                style={{ border: "2px solid rgba(239, 68, 68, 0.5)" }}
+                aria-hidden="true"
+              />
+            )}
+            {/* Mic icon */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" x2="12" y1="19" y2="22" />
+            </svg>
+          </Button>
+        )}
         <Button
           onClick={() => {
             triggerHaptic("confirm");

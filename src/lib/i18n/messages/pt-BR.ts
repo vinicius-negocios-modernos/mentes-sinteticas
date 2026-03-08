@@ -67,6 +67,12 @@ export const messages = {
     tokenWarning:
       "Voce usou mais de 80% do seu limite diario de tokens.",
     tokenWarningClose: "Fechar aviso",
+    copyCode: "Copiar codigo",
+    copyCodeShort: "Copiar",
+    codeCopied: "Copiado!",
+    codeBlockAria: "Bloco de codigo {lang}",
+    collapseMore: "Mostrar mais",
+    collapseLess: "Mostrar menos",
     userLabel: "EU",
     defaultMindInitials: "MS",
     errorTitle: "Erro no chat",
@@ -100,6 +106,168 @@ export const messages = {
 
   footer: {
     builtWith: "Construido com Google Gemini 2.0 Flash & File API",
+  },
+
+  mindProfile: {
+    about: "Sobre",
+    personalityTraits: "Tracos de Personalidade",
+    expertise: "Areas de Expertise",
+    knowledgeSources: "Fontes de Conhecimento",
+    noKnowledgeSources: "Nenhuma fonte de conhecimento disponivel",
+    noKnowledgeSourcesDescription:
+      "Esta mente ainda nao possui documentos de conhecimento associados.",
+    conversationStarters: "Sugestoes de Conversa",
+    startConversation: "Iniciar Conversa",
+    startConversationWith: "Iniciar conversa com",
+    era: "Era",
+    nationality: "Nacionalidade",
+    breadcrumbHome: "Home",
+  },
+
+  offline: {
+    indicator:
+      "Voce esta offline. Alguns recursos podem nao estar disponiveis.",
+    pageTitle: "Voce esta offline",
+    pageDescription:
+      "Reconecte-se a internet para continuar usando o Mentes Sinteticas.",
+    retry: "Tentar Novamente",
+    offlineTag: "(offline)",
+    chatDisabled: "Conecte-se para enviar mensagens",
+  },
+
+  sharing: {
+    shareButton: "Compartilhar",
+    shareAriaLabel: "Compartilhar conversa",
+    sharedBadge: "Compartilhada",
+    sharedIndicator: "Conversa compartilhada",
+    linkCopied: "Link copiado para area de transferencia",
+    copyLink: "Copiar link",
+    copyFallback: "Copie o link",
+    revokeSharing: "Revogar compartilhamento",
+    revokeTitle: "Revogar compartilhamento",
+    revokeDescription:
+      "Ao revogar, o link atual deixara de funcionar. Quem acessar o link vera uma pagina de erro. Deseja continuar?",
+    revokeConfirm: "Revogar",
+    shareRevoked: "Compartilhamento revogado",
+    cancel: "Cancelar",
+    createAccountCta: "Crie sua conta para conversar",
+    exploreMindsCta: "Conhecer mais mentes",
+    sharedConversationHeader: "Cabecalho da conversa compartilhada",
+    footerLabel: "Rodape do Mentes Sinteticas",
+    footerNavLabel: "Navegacao do rodape",
+  },
+
+  memory: {
+    panelTitle: "Memorias",
+    buttonLabel: "Memorias",
+    panelDescription: "O que {mindName} lembra sobre voce",
+    emptyState:
+      "Esta mente ainda nao tem memorias sobre voce. Converse mais para que ela aprenda!",
+    typeFact: "Fatos",
+    typePreference: "Preferencias",
+    typeTopic: "Topicos de Interesse",
+    typeInsight: "Insights",
+    deleteOne: "Excluir memoria",
+    deleteAll: "Apagar todas as memorias desta mente",
+    deleteAllConfirmTitle: "Apagar todas as memorias?",
+    deleteAllConfirmDescription:
+      "Todas as memorias que {mindName} tem sobre voce serao permanentemente excluidas. Esta acao nao pode ser desfeita.",
+    cancel: "Cancelar",
+    confirmDelete: "Apagar tudo",
+  },
+
+  voice: {
+    // Labels
+    startRecording: "Iniciar gravacao de voz",
+    stopRecording: "Parar gravacao de voz",
+    listenMessage: "Ouvir mensagem em voz alta",
+    stopListening: "Parar leitura",
+    voiceModeOn: "Desativar modo voz",
+    voiceModeOff: "Ativar modo voz",
+    autoPlayOn: "Desativar leitura automatica",
+    autoPlayOff: "Ativar leitura automatica",
+    // Status
+    recordingStarted: "Gravacao iniciada",
+    recordingStopped: "Gravacao encerrada",
+    transcriptReady: "Texto transcrito",
+    ttsStarted: "Leitura em voz alta iniciada",
+    ttsStopped: "Leitura em voz alta encerrada",
+    voiceModeEnabled: "Modo voz ativado",
+    voiceModeDisabled: "Modo voz desativado",
+    // Errors
+    errorPermission:
+      "Permissao de microfone negada. Habilite o microfone nas configuracoes do navegador.",
+    errorNoSpeech:
+      "Nenhuma fala detectada. Tente novamente mais perto do microfone.",
+    errorNetwork:
+      "Erro de rede no reconhecimento de voz. Verifique sua conexao.",
+    errorAborted: "Gravacao interrompida.",
+    errorAudioCapture:
+      "Nao foi possivel acessar o microfone. Verifique se outro app esta usando.",
+    errorGeneric: "Erro no reconhecimento de voz. Tente novamente.",
+    // Tooltips
+    voiceModeTooltip: "Modo voz",
+    autoPlayTooltip: "Leitura automatica de respostas",
+    // A11y live announcements
+    a11yRecording: "Gravando",
+    a11yProcessing: "Processando",
+    a11yPlaying: "Reproduzindo resposta",
+  },
+
+  soundscape: {
+    controlsLabel: "Controles de audio ambiente",
+    ambientSound: "Som Ambiente",
+    on: "Ligado",
+    ambientOff: "Som ambiente desligado",
+    enableAmbient: "Ativar som ambiente",
+    disableAmbient: "Desativar som ambiente",
+    mute: "Silenciar audio",
+    unmute: "Ativar audio",
+    volumeLabel: "Volume do som ambiente",
+    activateAudio: "Ativar Audio Ambiente",
+    reducedMotionHint:
+      "Audio silenciado por preferencia de acessibilidade (prefers-reduced-motion). Clique em unmute para ativar.",
+    a11yMuted: "a11y",
+    // A11y live announcements
+    a11yEnabled: "Som ambiente ativado",
+    a11yDisabled: "Som ambiente desativado",
+  },
+
+  debate: {
+    navLabel: "Debates",
+    pageTitle: "Debates",
+    setupTitle: "Novo Debate",
+    topicLabel: "Topico do Debate",
+    topicPlaceholder:
+      "Ex: Qual e o papel da tecnologia no futuro da educacao?",
+    selectMinds: "Selecione as Mentes",
+    startDebate: "Iniciar Debate",
+    creating: "Criando Debate...",
+    nextTurn: "Proximo Turno",
+    interject: "Intervir",
+    pause: "Pausar",
+    resume: "Retomar",
+    end: "Encerrar",
+    newDebate: "Novo Debate",
+    completed: "Debate concluido",
+    paused: "Debate pausado",
+    processing: "Processando...",
+    back: "Voltar",
+    loadingDebate: "Carregando debate...",
+    errorTitle: "Erro no debate",
+    errorDescription:
+      "Ocorreu um erro ao carregar o debate. Tente novamente.",
+    errorRetry: "Tentar novamente",
+    startInstruction:
+      'Clique em "Proximo Turno" para iniciar o debate.',
+    mindResponding: "{mindName} esta respondendo",
+    interjectPlaceholder: "Sua mensagem para o debate...",
+    maxMinds: "Maximo de 4 mentes por debate.",
+    minTopic: "O topico deve ter pelo menos 3 caracteres.",
+    minMinds: "Selecione pelo menos 2 mentes para o debate.",
+    youLabel: "Voce",
+    roundLabel: "Round",
+    turnLabel: "Turno",
   },
 
   errors: {

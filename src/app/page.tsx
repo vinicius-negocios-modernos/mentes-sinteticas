@@ -1,6 +1,6 @@
 
 import { Suspense } from "react";
-import { getMindsList } from "./actions";
+import { getMindsWithSlugs } from "./actions";
 import AppHeader from "@/components/layout/app-header";
 import AppFooter from "@/components/layout/app-footer";
 import MindCard from "@/components/minds/mind-card";
@@ -14,7 +14,7 @@ import HomeEmptyState from "@/components/home-empty-state";
  * Extracted to enable Suspense boundary around the data-fetching part.
  */
 async function MindCardsGrid() {
-  const minds = await getMindsList();
+  const minds = await getMindsWithSlugs();
 
   return (
     <>
@@ -30,9 +30,9 @@ async function MindCardsGrid() {
           ) : (
             minds.map(mind => (
               <MindTag
-                key={mind}
-                name={mind}
-                href={`/chat/${encodeURIComponent(mind)}`}
+                key={mind.slug}
+                name={mind.name}
+                href={`/mind/${encodeURIComponent(mind.slug)}`}
               />
             ))
           )}

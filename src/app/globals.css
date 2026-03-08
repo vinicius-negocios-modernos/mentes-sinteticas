@@ -159,6 +159,112 @@ h1, h2, h3, h4, h5, h6 {
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+/* ----------------------------------------------------------------
+ * Mind Themes — per-mind accent colors via data attribute
+ * Applied on the chat page container: [data-mind-theme="slug"]
+ * These override the .dark base tokens for accent/primary/ring
+ * and introduce mind-specific gradient and glow variables.
+ * ---------------------------------------------------------------- */
+
+/* Mind theme variables — defaults (no theme applied) */
+[data-mind-theme] {
+  --mind-gradient-from: #1e1b4b;
+  --mind-gradient-to: #0c0a1d;
+  --mind-glow: rgba(168, 85, 247, 0.15);
+}
+
+/* Aristoteles — Amber/Gold (ancient Greek philosophy) */
+.dark [data-mind-theme="aristoteles"] {
+  --primary: 38 92% 50%;
+  --accent: 45 93% 47%;
+  --ring: 38 92% 50%;
+  --mind-gradient-from: #92400e;
+  --mind-gradient-to: #1e1b4b;
+  --mind-glow: rgba(245, 158, 11, 0.15);
+}
+
+/* Da Vinci — Sepia/Terracotta (Renaissance) */
+.dark [data-mind-theme="da-vinci"] {
+  --primary: 24 75% 55%;
+  --accent: 15 70% 45%;
+  --ring: 24 75% 55%;
+  --mind-gradient-from: #7c2d12;
+  --mind-gradient-to: #1c1917;
+  --mind-glow: rgba(234, 138, 72, 0.15);
+}
+
+/* Tesla — Electric Blue/Cyan (electricity, futurism) */
+.dark [data-mind-theme="tesla"] {
+  --primary: 199 89% 48%;
+  --accent: 185 100% 50%;
+  --ring: 199 89% 48%;
+  --mind-gradient-from: #0c4a6e;
+  --mind-gradient-to: #0f172a;
+  --mind-glow: rgba(14, 165, 233, 0.15);
+}
+
+/* Curie — Emerald/Radioactive Green (science, radium) */
+.dark [data-mind-theme="curie"] {
+  --primary: 142 71% 45%;
+  --accent: 160 84% 39%;
+  --ring: 142 71% 45%;
+  --mind-gradient-from: #064e3b;
+  --mind-gradient-to: #0f172a;
+  --mind-glow: rgba(34, 197, 94, 0.15);
+}
+
+/* Hypatia — Cosmic Purple/Violet (astronomy, Alexandria) */
+.dark [data-mind-theme="hypatia"] {
+  --primary: 270 70% 60%;
+  --accent: 280 80% 65%;
+  --ring: 270 70% 60%;
+  --mind-gradient-from: #4c1d95;
+  --mind-gradient-to: #0f0a2e;
+  --mind-glow: rgba(147, 51, 234, 0.15);
+}
+
+/* Turing — Terminal Green/Matrix (computing, codebreaking) */
+.dark [data-mind-theme="turing"] {
+  --primary: 120 60% 50%;
+  --accent: 140 70% 40%;
+  --ring: 120 60% 50%;
+  --mind-gradient-from: #14532d;
+  --mind-gradient-to: #0a0f0a;
+  --mind-glow: rgba(74, 222, 128, 0.15);
+}
+
+/* Mind theme transitions — smooth color shift when navigating between minds */
+[data-mind-theme] {
+  transition:
+    background 400ms ease,
+    border-color 400ms ease,
+    box-shadow 400ms ease,
+    color 400ms ease;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  [data-mind-theme],
+  [data-mind-theme] * {
+    transition: none !important;
+  }
+}
+
+/* Mind-themed background gradient overlay on chat container */
+[data-mind-theme] .mind-theme-bg {
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    var(--mind-gradient-from) 0%,
+    transparent 70%
+  );
+  opacity: 0.3;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+}
+
 /* Custom utilities — preserved from original design */
 .glass-panel {
   background: rgba(255, 255, 255, 0.03);
@@ -188,4 +294,75 @@ h1, h2, h3, h4, h5, h6 {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* ----------------------------------------------------------------
+ * Voice Mode Animations
+ * Pulse ring for active mic, sound waves for active TTS.
+ * Disabled when prefers-reduced-motion is set.
+ * ---------------------------------------------------------------- */
+
+@keyframes voice-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes voice-waves {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.animate-voice-pulse {
+  animation: voice-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-voice-waves {
+  animation: voice-waves 1s ease-in-out infinite;
+}
+
+/* Respect prefers-reduced-motion — disable pulsing/wave animations
+ * Replace animated pulse with a static visible border indicator (AC6). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-voice-pulse,
+  .animate-voice-waves {
+    animation: none !important;
+  }
+
+  /* Static recording indicator: solid border replaces pulse animation */
+  .animate-voice-pulse {
+    border: 2px solid rgba(239, 68, 68, 0.7) !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ----------------------------------------------------------------
+ * Global reduced-motion: disable ALL animations and transitions
+ * Covers Tailwind animate-* utilities (bounce, spin, pulse, etc.),
+ * animate-in/fade-in, and any transition-based UI (scroll button,
+ * action button opacity, link hover, etc.).
+ * Mind-theme transitions are handled separately above.
+ * ---------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

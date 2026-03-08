@@ -6,6 +6,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const ContentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self'",
+  "worker-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   `connect-src 'self' *.supabase.co generativelanguage.googleapis.com *.ingest.sentry.io`,
   "img-src 'self' data: blob:",

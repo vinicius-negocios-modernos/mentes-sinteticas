@@ -2,7 +2,7 @@
 
 import { createMindChat, getAvailableMinds } from "@/lib/ai";
 import { createClient } from "@/lib/supabase/server";
-import { listActiveMindNames, getMindByName } from "@/lib/services/minds";
+import { listActiveMindNames, listActiveMinds, getMindByName } from "@/lib/services/minds";
 import {
   createConversation,
   getConversationById,
@@ -51,6 +51,26 @@ export async function getMinds(): Promise<string[]> {
  */
 export async function getMindsList(): Promise<string[]> {
   return getMinds();
+}
+
+/**
+ * Get list of active minds with name and slug for home page rendering.
+ * Returns name + slug pairs for linking to both /chat/{name} and /mind/{slug}.
+ */
+export async function getMindsWithSlugs(): Promise<
+  { name: string; slug: string }[]
+> {
+  try {
+    const minds = await listActiveMinds();
+    if (minds.length > 0) {
+      return minds.map((m) => ({ name: m.name, slug: m.slug }));
+    }
+  } catch {
+    // DB unavailable — fall through to manifest
+  }
+  // Fallback: use names as slugs (best effort)
+  const names = await getAvailableMinds();
+  return names.map((n) => ({ name: n, slug: n.toLowerCase().replace(/\s+/g, "-") }));
 }
 
 function classifyError(error: unknown): { message: string; type: ErrorType } {

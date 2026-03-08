@@ -14,7 +14,11 @@ export type { AIModelConfig } from "./config";
 export { getGenAI, getGoogleProvider } from "./client";
 
 // Prompts
-export { buildSystemPrompt, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
+export { buildSystemPrompt, buildSystemPromptWithMemories, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
+
+// Memory Extraction
+export { extractMemories } from "./memory";
+export type { ExtractedMemory } from "./memory";
 
 // Knowledge
 export {

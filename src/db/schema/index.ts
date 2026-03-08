@@ -25,3 +25,18 @@ export {
   type TokenUsage,
   type NewTokenUsage,
 } from "./token-usage";
+export {
+  mindMemories,
+  type MindMemory,
+  type NewMindMemory,
+} from "./mind-memories";
+export {
+  debates,
+  type Debate,
+  type NewDebate,
+} from "./debates";
+export {
+  debateParticipants,
+  type DebateParticipant as DbDebateParticipant,
+  type NewDebateParticipant,
+} from "./debate-participants";

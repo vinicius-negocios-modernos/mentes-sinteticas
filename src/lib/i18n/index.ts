@@ -28,15 +28,18 @@ const activeLocale = "pt-BR";
 
 /**
  * Translate a dot-notation key into the corresponding string.
+ * Supports simple parameter interpolation with `{paramName}` placeholders.
  *
  * @example
  * ```ts
- * t("chat.send")        // "Enviar"
- * t("auth.loginTitle")  // "Entrar"
- * t("unknown.key")      // "unknown.key"  (fallback)
+ * t("chat.send")                          // "Enviar"
+ * t("auth.loginTitle")                    // "Entrar"
+ * t("memory.panelDescription", { mindName: "Aristoteles" })
+ *                                         // "O que Aristoteles lembra sobre voce"
+ * t("unknown.key")                        // "unknown.key"  (fallback)
  * ```
  */
-export function t(key: string): string {
+export function t(key: string, params?: Record<string, string>): string {
   const msgs = locales[activeLocale];
   if (!msgs) return key;
 
@@ -49,7 +52,16 @@ export function t(key: string): string {
     result = result[part];
   }
 
-  return typeof result === "string" ? result : key;
+  if (typeof result !== "string") return key;
+
+  // Simple parameter interpolation: replace {paramName} with values
+  if (params) {
+    return result.replace(/\{(\w+)\}/g, (_, paramKey: string) =>
+      paramKey in params ? params[paramKey] : `{${paramKey}}`
+    );
+  }
+
+  return result;
 }
 
 export type { Messages };

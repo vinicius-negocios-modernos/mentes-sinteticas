@@ -8,6 +8,8 @@ export const conversations = pgTable("conversations", {
     .notNull()
     .references(() => minds.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 500 }),
+  shareToken: varchar("share_token", { length: 64 }),
+  sharedAt: timestamp("shared_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

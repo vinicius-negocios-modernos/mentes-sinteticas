@@ -17,6 +17,63 @@ export function buildSystemPrompt(mindName: string): string {
     - These guidelines exist to preserve the authenticity of the experience. Your role is to faithfully represent ${mindName}'s voice, knowledge, and perspective.`;
 }
 
+// ── Memory type labels for prompt formatting ──────────────────────────
+
+const MEMORY_TYPE_LABELS: Record<string, string> = {
+  fact: "Facts",
+  preference: "Preferences",
+  topic: "Topics of Interest",
+  insight: "Insights",
+};
+
+/**
+ * Build the system prompt with user memories injected.
+ * Adds a "What you remember about this user" section to the base prompt.
+ * If no memories exist, returns the base prompt unchanged.
+ *
+ * @param mindName - Name of the mind persona
+ * @param memories - Array of MindMemory objects to inject
+ * @returns Complete system prompt with memories section
+ */
+export function buildSystemPromptWithMemories(
+  mindName: string,
+  memories: Array<{ memoryType: string; content: string }>
+): string {
+  const basePrompt = buildSystemPrompt(mindName);
+
+  if (memories.length === 0) {
+    return basePrompt;
+  }
+
+  // Group memories by type
+  const grouped: Record<string, string[]> = {};
+  for (const memory of memories) {
+    const type = memory.memoryType;
+    if (!grouped[type]) grouped[type] = [];
+    grouped[type].push(memory.content);
+  }
+
+  // Build memories section
+  const sections: string[] = [];
+  for (const [type, items] of Object.entries(grouped)) {
+    const label = MEMORY_TYPE_LABELS[type] ?? type;
+    sections.push(`${label}:\n${items.map((item) => `- ${item}`).join("\n")}`);
+  }
+
+  const memoriesSection = `
+
+    What you remember about this user:
+    ${sections.join("\n\n")}
+
+    Guidelines for using memories:
+    - Reference these memories naturally when contextually relevant.
+    - Do NOT list or recite memories back to the user.
+    - Use them to personalize your responses and show continuity.
+    - If a memory seems outdated or contradicted by the user, follow the user's current statement.`;
+
+  return basePrompt + memoriesSection;
+}
+
 /**
  * Build the priming user message for knowledge injection.
  */

@@ -9,7 +9,9 @@ import ChatMessage, { ChatMessageLoading } from "@/components/chat/chat-message"
 import ChatInput from "@/components/chat/chat-input";
 import ChatEmptyState from "@/components/chat/chat-empty-state";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { t } from "@/lib/i18n";
 import { classifyError, type AppError } from "@/lib/errors";
+import { useVoiceContext } from "@/components/chat/chat-voice-wrapper";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -49,6 +51,8 @@ interface ChatInterfaceProps {
   greeting?: string;
   /** Personalized suggested prompts for this mind (passed to ChatEmptyState) */
   suggestedPrompts?: string[];
+  /** Mind slug for voice mode per-mind config. */
+  mindSlug?: string;
 }
 
 export default function ChatInterface({
@@ -58,7 +62,11 @@ export default function ChatInterface({
   initialConversationId,
   greeting,
   suggestedPrompts,
+  mindSlug,
 }: ChatInterfaceProps) {
+  // Voice mode from context (null if no VoiceProvider wraps this)
+  const voice = useVoiceContext();
+  void mindSlug; // Voice config is handled by VoiceProvider
   const [messages, setMessages] = useState<ChatMessageType[]>(
     initialMessages ?? [
       {
@@ -76,8 +84,46 @@ export default function ChatInterface({
   const [streamingText, setStreamingText] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [tokenWarning, setTokenWarning] = useState(false);
+  const [speakingMessageIdx, setSpeakingMessageIdx] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+
+  // Register transcript callback with shared voice state
+  useEffect(() => {
+    if (!voice) return;
+    voice.setOnTranscript((transcript: string) => {
+      setInput(transcript);
+    });
+    return () => {
+      voice.setOnTranscript(null);
+    };
+  }, [voice]);
+
+  // Track last message count for auto-play TTS
+  const prevMessageCountRef = useRef(messages.length);
+  useEffect(() => {
+    if (
+      voice?.enabled &&
+      voice.autoPlay &&
+      voice.ttsSupported &&
+      messages.length > prevMessageCountRef.current
+    ) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && lastMsg.role === "model" && !isLoading) {
+        voice.speakText(lastMsg.text);
+        setSpeakingMessageIdx(messages.length - 1);
+      }
+    }
+    prevMessageCountRef.current = messages.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, isLoading]);
+
+  // Clear speaking index when TTS stops
+  useEffect(() => {
+    if (voice && !voice.isSpeaking) {
+      setSpeakingMessageIdx(null);
+    }
+  }, [voice?.isSpeaking, voice]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -338,6 +384,20 @@ export default function ChatInterface({
             </button>
           </div>
         )}
+        {/* Voice mode status announcements (screen reader only) */}
+        {voice && (
+          <div
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only"
+          >
+            {voice.isListening
+              ? t("voice.a11yRecording")
+              : voice.isSpeaking
+                ? t("voice.a11yPlaying")
+                : ""}
+          </div>
+        )}
         {/* Messages Area */}
         <div className="relative flex-1 overflow-hidden">
           <ScrollArea className="h-full">
@@ -357,6 +417,23 @@ export default function ChatInterface({
                     text={msg.text}
                     mindName={mindName}
                     timestamp={msg.timestamp}
+                    showSpeakerButton={
+                      !!voice?.enabled &&
+                      !!voice?.ttsSupported &&
+                      msg.role === "model"
+                    }
+                    isSpeakingThis={
+                      !!voice?.isSpeaking && speakingMessageIdx === idx
+                    }
+                    onSpeak={(text) => {
+                      voice?.stopSpeaking();
+                      setSpeakingMessageIdx(idx);
+                      voice?.speakText(text);
+                    }}
+                    onStopSpeaking={() => {
+                      voice?.stopSpeaking();
+                      setSpeakingMessageIdx(null);
+                    }}
                   />
                 ))}
                 {/* Show streaming text as it arrives */}
@@ -365,6 +442,7 @@ export default function ChatInterface({
                     role="model"
                     text={streamingText}
                     mindName={mindName}
+                    isStreaming
                   />
                 )}
                 {/* Show loading indicator when waiting for first token */}
@@ -391,7 +469,13 @@ export default function ChatInterface({
               variant="ghost"
               size="sm"
               onClick={() => scrollToBottom("smooth")}
-              className="h-11 w-11 rounded-full bg-purple-600/50 hover:bg-purple-600/70 border border-purple-500/40 text-white shadow-lg backdrop-blur-sm p-0"
+              className="h-11 w-11 rounded-full text-white shadow-lg backdrop-blur-sm p-0"
+              style={{
+                backgroundColor: "hsl(var(--primary) / 0.5)",
+                borderWidth: "1px",
+                borderStyle: "solid",
+                borderColor: "hsl(var(--primary) / 0.4)",
+              }}
               aria-label="Ir para o final"
             >
               <svg
@@ -404,6 +488,7 @@ export default function ChatInterface({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                aria-hidden="true"
               >
                 <path d="M12 5v14" />
                 <path d="m19 12-7 7-7-7" />
@@ -419,6 +504,10 @@ export default function ChatInterface({
           onSend={handleSend}
           disabled={isLoading}
           helperText={helperText}
+          showMicButton={!!voice?.enabled && !!voice?.sttSupported}
+          isListening={!!voice?.isListening}
+          onStartListening={voice?.startListening}
+          onStopListening={voice?.stopListening}
         />
       </div>
     </ErrorBoundary>

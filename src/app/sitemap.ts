@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
+import { listActiveMinds } from "@/lib/services/minds";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_APP_URL || "https://mentes-sinteticas.vercel.app";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  return [
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Static pages
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
       lastModified: new Date(),
@@ -24,4 +26,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
   ];
+
+  // Dynamic mind profile pages
+  let mindPages: MetadataRoute.Sitemap = [];
+  try {
+    const minds = await listActiveMinds();
+    mindPages = minds.map((mind) => ({
+      url: `${BASE_URL}/mind/${mind.slug}`,
+      lastModified: mind.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    }));
+  } catch {
+    // DB unavailable — return static pages only
+  }
+
+  return [...staticPages, ...mindPages];
 }

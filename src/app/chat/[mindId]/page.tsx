@@ -4,6 +4,8 @@ import { getMindByName } from "@/lib/services/minds";
 import { mindGreetings } from "@/lib/ai/greetings";
 import ChatHeader from "@/components/chat/chat-header";
 import ChatInterface from "@/components/chat/chat-interface";
+import ChatSoundscapeBar from "@/components/chat/chat-soundscape-bar";
+import { VoiceProvider } from "@/components/chat/chat-voice-wrapper";
 import ConversationList from "@/components/chat/conversation-list";
 import ConversationDrawer from "@/components/chat/conversation-drawer";
 import { ConversationListSkeleton } from "@/components/skeletons/conversation-list-skeleton";
@@ -85,6 +87,7 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
   // Load existing conversation messages if resuming
   let initialMessages: ChatMessage[] | undefined;
   let activeConversationId: string | undefined;
+  let activeShareToken: string | null = null;
 
   if (conversationId) {
     const dbMessages = await getConversationMessages(conversationId);
@@ -95,6 +98,11 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
         role: m.role === "assistant" ? "model" : "user",
         text: m.content,
       }));
+      // Check if conversation is shared (for share button state)
+      const convData = conversations.find((c) => c.id === conversationId);
+      if (convData?.shareToken) {
+        activeShareToken = convData.shareToken;
+      }
     }
   }
 
@@ -102,42 +110,50 @@ export default async function ChatPage({ params, searchParams }: ChatPageProps) 
   const greetingConfig = mindGreetings[mindSlug];
 
   return (
-    <div className="min-h-[100dvh] p-2 sm:p-4 md:p-8 font-[family-name:var(--font-geist-sans)] flex flex-col">
-      <div className="flex items-center gap-2">
-        <ConversationDrawer
-          conversations={conversations}
-          mindId={decodedName}
-          activeConversationId={activeConversationId}
-        />
-        <ChatHeader mindName={decodedName} mindDescription={mindDescription} backHref="/" className="flex-1" />
-      </div>
-
-      <main id="main-content" className="flex-1 w-full flex gap-4">
-        {/* Conversation Sidebar */}
-        <aside className="hidden md:flex flex-col w-64 shrink-0">
-          <h2 className="text-sm font-semibold text-gray-400 mb-3 px-1">
-            Conversas
-          </h2>
-          <Suspense fallback={<ConversationListSkeleton />}>
-            <ConversationSidebar
-              mindName={decodedName}
-              activeConversationId={activeConversationId}
-            />
-          </Suspense>
-        </aside>
-
-        {/* Chat Area */}
-        <div className="flex-1 min-w-0">
-          <ChatInterface
-            mindName={decodedName}
-            mindDescription={mindDescription}
-            initialMessages={initialMessages}
-            initialConversationId={activeConversationId}
-            greeting={greetingConfig?.greeting}
-            suggestedPrompts={greetingConfig?.suggestedPrompts}
+    <VoiceProvider mindSlug={mindSlug}>
+      <div data-mind-theme={mindSlug} className="min-h-[100dvh] p-2 sm:p-4 md:p-8 font-[family-name:var(--font-geist-sans)] flex flex-col relative">
+        {/* Mind theme background gradient overlay */}
+        <div className="mind-theme-bg" aria-hidden="true" />
+        <div className="flex items-center gap-2 relative z-10">
+          <ConversationDrawer
+            conversations={conversations}
+            mindId={decodedName}
+            activeConversationId={activeConversationId}
           />
+          <ChatHeader mindName={decodedName} mindDescription={mindDescription} mindDbId={mindData?.id} backHref="/" className="flex-1" conversationId={activeConversationId} initialShareToken={activeShareToken} />
         </div>
-      </main>
-    </div>
+
+        {/* Ambient soundscape controls — per-mind audio */}
+        <ChatSoundscapeBar mindSlug={mindSlug} />
+
+        <main id="main-content" className="flex-1 w-full flex gap-4 relative z-10">
+          {/* Conversation Sidebar */}
+          <aside className="hidden md:flex flex-col w-64 shrink-0">
+            <h2 className="text-sm font-semibold text-gray-400 mb-3 px-1">
+              Conversas
+            </h2>
+            <Suspense fallback={<ConversationListSkeleton />}>
+              <ConversationSidebar
+                mindName={decodedName}
+                activeConversationId={activeConversationId}
+              />
+            </Suspense>
+          </aside>
+
+          {/* Chat Area */}
+          <div className="flex-1 min-w-0">
+            <ChatInterface
+              mindName={decodedName}
+              mindDescription={mindDescription}
+              initialMessages={initialMessages}
+              initialConversationId={activeConversationId}
+              greeting={greetingConfig?.greeting}
+              suggestedPrompts={greetingConfig?.suggestedPrompts}
+              mindSlug={mindSlug}
+            />
+          </div>
+        </main>
+      </div>
+    </VoiceProvider>
   );
 }

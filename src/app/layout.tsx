@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
+import { OfflineIndicator } from "@/components/ui/offline-indicator";
+import { ServiceWorkerProvider } from "@/components/providers/sw-provider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
@@ -152,6 +154,8 @@ export default async function RootLayout({
             {children}
           </ErrorBoundary>
           <Toaster />
+          <OfflineIndicator />
+          <ServiceWorkerProvider />
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

@@ -29,6 +29,22 @@ export interface GeminiHistoryEntry {
 
 export type ErrorType = "API_KEY_MISSING" | "MIND_NOT_FOUND" | "API_ERROR" | "RATE_LIMITED" | "UNKNOWN";
 
+// ── Debate Types ─────────────────────────────────────────────────────
+
+export type DebateStatus = "setup" | "active" | "paused" | "completed";
+
+export interface DebateMessage extends ChatMessage {
+  mindName: string;
+  mindSlug: string;
+}
+
+export interface DebateParticipantInfo {
+  mindId: string;
+  mindName: string;
+  mindSlug: string;
+  turnOrder: number;
+}
+
 export interface SendMessageResponse {
     success: boolean;
     text?: string;

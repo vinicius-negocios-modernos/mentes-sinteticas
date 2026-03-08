@@ -9,13 +9,15 @@ import { messages, type Message, type NewMessage } from "@/db/schema";
  * @param role - Message author role ("user" or "assistant")
  * @param content - The message text content
  * @param tokenCount - Optional token count for usage tracking
+ * @param mindSlug - Optional mind slug (for debate messages identifying which mind spoke)
  * @returns The newly created message record
  */
 export async function createMessage(
   conversationId: string,
   role: "user" | "assistant",
   content: string,
-  tokenCount?: number
+  tokenCount?: number,
+  mindSlug?: string
 ): Promise<Message> {
   const [message] = await db
     .insert(messages)
@@ -24,6 +26,7 @@ export async function createMessage(
       role,
       content,
       tokenCount: tokenCount ?? null,
+      mindSlug: mindSlug ?? null,
     } satisfies NewMessage)
     .returning();
 

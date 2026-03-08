@@ -4,7 +4,7 @@ import { getGoogleProvider } from "./client";
 import { getAIConfig } from "./config";
 import { buildSystemPrompt, buildKnowledgePrimingMessage, buildKnowledgePrimingResponse } from "./prompts";
 import { getFileParts, getMindFromDb, getMindManifest } from "./knowledge";
-import { truncateHistory, estimateMessagesTokens } from "./context";
+import { truncateHistory, estimateMessagesTokens, getContextBudget } from "./context";
 import { logger } from "@/lib/logger";
 
 /**
@@ -14,7 +14,8 @@ import { logger } from "@/lib/logger";
 async function buildStreamMessages(
   mindName: string,
   userMessage: string,
-  history: ModelMessage[]
+  history: ModelMessage[],
+  memoryTokens: number = 0
 ): Promise<ModelMessage[]> {
   const fileParts = await getFileParts(mindName);
   const messages: ModelMessage[] = [];
@@ -51,8 +52,10 @@ async function buildStreamMessages(
     });
   }
 
-  // Truncate history to fit within context budget
-  const truncatedHistory = truncateHistory(history);
+  // Truncate history to fit within context budget (reduced by memory tokens)
+  const { maxHistoryTokens } = getContextBudget();
+  const adjustedBudget = memoryTokens > 0 ? Math.max(1000, maxHistoryTokens - memoryTokens) : undefined;
+  const truncatedHistory = truncateHistory(history, adjustedBudget);
   const beforeTokens = estimateMessagesTokens(history);
   const afterTokens = estimateMessagesTokens(truncatedHistory);
   if (beforeTokens !== afterTokens) {
@@ -82,6 +85,10 @@ export interface StreamMindChatOptions {
   mindName: string;
   userMessage: string;
   history?: ModelMessage[];
+  /** Optional override for the system prompt (e.g., with memories injected). */
+  systemPrompt?: string;
+  /** Tokens consumed by memories — subtracted from history budget. */
+  memoryTokens?: number;
   onFinish?: (result: {
     text: string;
     usage?: StreamUsageData;
@@ -97,6 +104,8 @@ export async function streamMindChat({
   mindName,
   userMessage,
   history = [],
+  systemPrompt,
+  memoryTokens = 0,
   onFinish,
 }: StreamMindChatOptions) {
   // Verify mind exists
@@ -114,11 +123,11 @@ export async function streamMindChat({
   const aiConfig = getAIConfig();
   const google = getGoogleProvider();
 
-  const messages = await buildStreamMessages(mindName, userMessage, history);
+  const messages = await buildStreamMessages(mindName, userMessage, history, memoryTokens);
 
   const result = streamText({
     model: google(aiConfig.model),
-    system: buildSystemPrompt(mindName),
+    system: systemPrompt ?? buildSystemPrompt(mindName),
     messages,
     temperature: aiConfig.temperature,
     topK: aiConfig.topK,
