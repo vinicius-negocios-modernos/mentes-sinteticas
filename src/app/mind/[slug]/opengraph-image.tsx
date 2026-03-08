@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getMindBySlug } from "@/lib/services/minds";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export const alt = "Mentes Sinteticas — Perfil da Mente";
 
