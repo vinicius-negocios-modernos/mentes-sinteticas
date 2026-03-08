@@ -3,8 +3,23 @@ import { GoogleAIFileManager, FileState } from "@google/generative-ai/server";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import { eq, and } from "drizzle-orm";
 
 dotenv.config({ path: ".env.local" });
+
+// Lazy DB imports — only used if DATABASE_URL is available
+let dbModule: typeof import("../src/db/index") | null = null;
+let schemaModule: typeof import("../src/db/schema/index") | null = null;
+
+async function getDbModules() {
+    if (!dbModule) {
+        dbModule = await import("../src/db/index");
+        schemaModule = await import("../src/db/schema/index");
+    }
+    return { db: dbModule.db, schema: schemaModule! };
+}
+
+const DB_ENABLED = !!process.env.DATABASE_URL;
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -73,6 +88,74 @@ async function uploadFile(filePath: string, displayName: string, mimeType: strin
     }
 }
 
+async function upsertFileUriCache(
+    relativePath: string,
+    mindName: string,
+    fileUri: string,
+    mimeType: string,
+    expiresAt: string | null,
+) {
+    if (!DB_ENABLED) return;
+
+    try {
+        const { db, schema } = await getDbModules();
+
+        // Find the mind by name
+        const mind = await db.query.minds.findFirst({
+            where: eq(schema.minds.name, mindName),
+        });
+        if (!mind) {
+            console.warn(`[DB] Mind "${mindName}" not found in database, skipping cache upsert.`);
+            return;
+        }
+
+        // Find the knowledge document by localPath and mindId
+        const doc = await db.query.knowledgeDocuments.findFirst({
+            where: and(
+                eq(schema.knowledgeDocuments.localPath, relativePath),
+                eq(schema.knowledgeDocuments.mindId, mind.id),
+            ),
+        });
+        if (!doc) {
+            console.warn(`[DB] Knowledge document not found for "${relativePath}", skipping cache upsert.`);
+            return;
+        }
+
+        // Check if a cache entry already exists for this document
+        const existing = await db.query.fileUriCache.findFirst({
+            where: eq(schema.fileUriCache.knowledgeDocumentId, doc.id),
+        });
+
+        if (existing) {
+            // Update existing entry
+            await db
+                .update(schema.fileUriCache)
+                .set({
+                    fileUri,
+                    mimeType,
+                    expiresAt: expiresAt ? new Date(expiresAt) : null,
+                    updatedAt: new Date(),
+                })
+                .where(eq(schema.fileUriCache.id, existing.id));
+        } else {
+            // Insert new entry
+            await db
+                .insert(schema.fileUriCache)
+                .values({
+                    knowledgeDocumentId: doc.id,
+                    fileUri,
+                    mimeType,
+                    expiresAt: expiresAt ? new Date(expiresAt) : null,
+                });
+        }
+
+        console.log(`[DB] Cached file URI for "${relativePath}" (expires: ${expiresAt || "unknown"})`);
+    } catch (error) {
+        console.warn(`[DB] Failed to cache file URI for "${relativePath}":`, error);
+        // Don't stop the script — manifest JSON is the backup
+    }
+}
+
 async function main() {
 
     // Get mind name from command line
@@ -138,12 +221,22 @@ async function main() {
                     manifest.minds[mindName].files = processedFiles;
                     manifest.minds[mindName].last_updated = new Date().toISOString();
                     await saveManifest(manifest);
+
+                    // Persist to database file_uri_cache table
+                    await upsertFileUriCache(
+                        relativePath,
+                        mindName,
+                        fileData.uri,
+                        fileData.mimeType || mimeType,
+                        fileData.expirationTime || null,
+                    );
                 }
             }
         }
     }
 
     console.log(`Starting ingestion for: ${mindName}`);
+    console.log(`Database caching: ${DB_ENABLED ? "ENABLED" : "DISABLED (set DATABASE_URL to enable)"}`);
     await walkAndUpload(mindPath);
     console.log("Ingestion complete!");
 }

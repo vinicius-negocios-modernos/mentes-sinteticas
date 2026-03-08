@@ -105,10 +105,13 @@ export async function getFileUrisFromDb(mindName: string): Promise<FileUriEntry[
 
     if (!mind) return null;
 
-    const entries = await db
+    const now = new Date();
+
+    const allEntries = await db
       .select({
         fileUri: fileUriCache.fileUri,
         mimeType: fileUriCache.mimeType,
+        expiresAt: fileUriCache.expiresAt,
       })
       .from(fileUriCache)
       .innerJoin(
@@ -117,9 +120,30 @@ export async function getFileUrisFromDb(mindName: string): Promise<FileUriEntry[
       )
       .where(eq(knowledgeDocuments.mindId, mind.id));
 
-    if (entries.length === 0) return null;
+    if (allEntries.length === 0) return null;
 
-    return entries;
+    // Filter out expired URIs
+    const validEntries = allEntries.filter((e) => {
+      if (!e.expiresAt) return true; // No expiration = always valid
+      return e.expiresAt > now;
+    });
+
+    const expiredCount = allEntries.length - validEntries.length;
+    if (expiredCount > 0) {
+      logger.warn(
+        `Filtered out ${expiredCount}/${allEntries.length} expired file URIs for mind "${mindName}"`
+      );
+    }
+
+    if (validEntries.length === 0) {
+      logger.error(
+        `All ${allEntries.length} file URIs for mind "${mindName}" are expired. ` +
+          `Re-run scripts/ingest_mind.ts to generate fresh URIs.`
+      );
+      return null;
+    }
+
+    return validEntries.map(({ fileUri, mimeType }) => ({ fileUri, mimeType }));
   } catch {
     return null;
   }
