@@ -199,12 +199,20 @@ async function main() {
 
                 const relativePath = path.relative(KNOWLEDGE_BASE_ROOT, fullPath);
 
-                // Check if already uploaded (simple check by name/path not hash for now, but good enough)
-                const alreadyExists = processedFiles.some(f => f.localPath === relativePath && existingUris.has(f.uri));
+                // Check if already uploaded and not expired
+                const existingEntry = processedFiles.find((f: any) => f.localPath === relativePath && existingUris.has(f.uri));
 
-                if (alreadyExists) {
-                    console.log(`Skipping existing: ${relativePath}`);
-                    continue;
+                if (existingEntry) {
+                    const isExpired = existingEntry.expires_at && new Date(existingEntry.expires_at) < new Date();
+                    if (!isExpired) {
+                        console.log(`Skipping existing (valid): ${relativePath}`);
+                        continue;
+                    }
+                    console.log(`Re-uploading expired URI: ${relativePath} (expired: ${existingEntry.expires_at})`);
+                    // Remove the expired entry so it gets replaced
+                    const idx = processedFiles.indexOf(existingEntry);
+                    if (idx !== -1) processedFiles.splice(idx, 1);
+                    existingUris.delete(existingEntry.uri);
                 }
 
                 const fileData = await uploadFile(fullPath, entry.name, mimeType);

@@ -1,157 +1,177 @@
 {
-  "_DEPRECATED": "This file is DEPRECATED as of Story 2.5. The database (Supabase) is now the primary source of truth for minds and knowledge documents. This file is retained as a read-only backup and fallback. Do NOT add new data here — use the DB seed script instead. Scheduled for removal in Story 3.x.",
   "minds": {
     "Antonio Napole": {
       "files": [
         {
-          "name": "files/du9c6ly41x7f",
+          "name": "files/jkgffusgsmrz",
           "displayName": "M1 - História de Vida e Formação.md",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/du9c6ly41x7f",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/jkgffusgsmrz",
           "mimeType": "text/markdown",
-          "localPath": "Antonio Napole/M1 - História de Vida e Formação.md"
+          "localPath": "Antonio Napole/M1 - História de Vida e Formação.md",
+          "expires_at": "2026-03-18T22:12:08.406149118Z"
         },
         {
-          "name": "files/twtsqz7pb5ns",
+          "name": "files/wy33pokqxqsm",
           "displayName": "M2 - Sistemas de Pensamento",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/twtsqz7pb5ns",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/wy33pokqxqsm",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/M2 - Sistemas de Pensamento"
+          "localPath": "Antonio Napole/M2 - Sistemas de Pensamento",
+          "expires_at": "2026-03-18T22:12:10.305589136Z"
         },
         {
-          "name": "files/p4paek0ugrck",
+          "name": "files/910l9qxgs00h",
           "displayName": "M3 - Domínio e Expertise",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/p4paek0ugrck",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/910l9qxgs00h",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/M3 - Domínio e Expertise"
+          "localPath": "Antonio Napole/M3 - Domínio e Expertise",
+          "expires_at": "2026-03-18T22:12:11.980912429Z"
         },
         {
-          "name": "files/dzbnosgsj3lc",
+          "name": "files/e1tle4eclovb",
           "displayName": "M4 - Comunicação e Expressão",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/dzbnosgsj3lc",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/e1tle4eclovb",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/M4 - Comunicação e Expressão"
+          "localPath": "Antonio Napole/M4 - Comunicação e Expressão",
+          "expires_at": "2026-03-18T22:12:13.667631261Z"
         },
         {
-          "name": "files/spcyizio6x43",
+          "name": "files/lq97xm0qpmyg",
           "displayName": "M5 - Valores e Princípios",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/spcyizio6x43",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/lq97xm0qpmyg",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/M5 - Valores e Princípios"
+          "localPath": "Antonio Napole/M5 - Valores e Princípios",
+          "expires_at": "2026-03-18T22:12:15.170499656Z"
         },
         {
-          "name": "files/l3jb464lwlf8",
+          "name": "files/zk9at1luxdqg",
           "displayName": "M6 - Contexto e Perspectiva",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/l3jb464lwlf8",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/zk9at1luxdqg",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/M6 - Contexto e Perspectiva"
+          "localPath": "Antonio Napole/M6 - Contexto e Perspectiva",
+          "expires_at": "2026-03-18T22:12:16.656496372Z"
         },
         {
-          "name": "files/p1lw2ducmlbn",
+          "name": "files/csrumst8dt2w",
           "displayName": "M7 - Legado e Impacto",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/p1lw2ducmlbn",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/csrumst8dt2w",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/M7 - Legado e Impacto"
+          "localPath": "Antonio Napole/M7 - Legado e Impacto",
+          "expires_at": "2026-03-18T22:12:18.209308477Z"
         },
         {
-          "name": "files/77e22d4vp3wq",
+          "name": "files/bgcqaix6efko",
           "displayName": "M8 - Fontes e Referências",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/77e22d4vp3wq",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/bgcqaix6efko",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/M8 - Fontes e Referências"
+          "localPath": "Antonio Napole/M8 - Fontes e Referências",
+          "expires_at": "2026-03-18T22:12:19.503412987Z"
         },
         {
-          "name": "files/sgsmad631oo5",
+          "name": "files/2kw4siqordhr",
           "displayName": "A Arquitetura da Dominância Competitiva: O Compêndio Definitivo da Metodologia Estratégica de Antônio Napole",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/sgsmad631oo5",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/2kw4siqordhr",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/A Arquitetura da Dominância Competitiva: O Compêndio Definitivo da Metodologia Estratégica de Antônio Napole"
+          "localPath": "Antonio Napole/analysis/A Arquitetura da Dominância Competitiva: O Compêndio Definitivo da Metodologia Estratégica de Antônio Napole",
+          "expires_at": "2026-03-18T22:12:21.414884166Z"
         },
         {
-          "name": "files/tr4j7hqqgwyz",
+          "name": "files/3fvtn0a2dr2i",
           "displayName": "A Mente do Estrategista: Sistema Operacional Mental de Antônio Napole",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/tr4j7hqqgwyz",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/3fvtn0a2dr2i",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/A Mente do Estrategista: Sistema Operacional Mental de Antônio Napole"
+          "localPath": "Antonio Napole/analysis/A Mente do Estrategista: Sistema Operacional Mental de Antônio Napole",
+          "expires_at": "2026-03-18T22:12:23.758507348Z"
         },
         {
-          "name": "files/93q0dnwjixxk",
+          "name": "files/uk6d3co0me5i",
           "displayName": "ARQUEOLOGIA COGNITIVA DEEP — ANTÔNIO NAPOLE D'ANDRÉA NETO",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/93q0dnwjixxk",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/uk6d3co0me5i",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/ARQUEOLOGIA COGNITIVA DEEP — ANTÔNIO NAPOLE D'ANDRÉA NETO"
+          "localPath": "Antonio Napole/analysis/ARQUEOLOGIA COGNITIVA DEEP — ANTÔNIO NAPOLE D'ANDRÉA NETO",
+          "expires_at": "2026-03-18T22:12:25.560922320Z"
         },
         {
-          "name": "files/6knu3nvqlffc",
+          "name": "files/amv2tkam2c65",
           "displayName": "ARQUEOLOGIA COGNITIVA: ANTÔNIO NAPOLE",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/6knu3nvqlffc",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/amv2tkam2c65",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/ARQUEOLOGIA COGNITIVA: ANTÔNIO NAPOLE"
+          "localPath": "Antonio Napole/analysis/ARQUEOLOGIA COGNITIVA: ANTÔNIO NAPOLE",
+          "expires_at": "2026-03-18T22:12:27.237253848Z"
         },
         {
-          "name": "files/9nmgfqzf9f9s",
+          "name": "files/2143n72aeyrg",
           "displayName": "Antônio Napole: o estrategista que \"arma o segundo lugar para vencer",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/9nmgfqzf9f9s",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/2143n72aeyrg",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/Antônio Napole: o estrategista que \"arma o segundo lugar para vencer"
+          "localPath": "Antonio Napole/analysis/Antônio Napole: o estrategista que \"arma o segundo lugar para vencer",
+          "expires_at": "2026-03-18T22:12:28.795267855Z"
         },
         {
-          "name": "files/mnjc8flaohx7",
+          "name": "files/3hjifkmxc8ol",
           "displayName": "COMPILAÇÃO COMPLETA — TODOS OS SLIDES palestra parabelum nov",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/mnjc8flaohx7",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/3hjifkmxc8ol",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/COMPILAÇÃO COMPLETA — TODOS OS SLIDES palestra parabelum nov"
+          "localPath": "Antonio Napole/analysis/COMPILAÇÃO COMPLETA — TODOS OS SLIDES palestra parabelum nov",
+          "expires_at": "2026-03-18T22:12:30.178512153Z"
         },
         {
-          "name": "files/ma69xjz5pdc6",
+          "name": "files/zry6pt6l7hnw",
           "displayName": "ENCICLOPÉDIA ESTRATÉGICA NAPOLE",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/ma69xjz5pdc6",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/zry6pt6l7hnw",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/ENCICLOPÉDIA ESTRATÉGICA NAPOLE"
+          "localPath": "Antonio Napole/analysis/ENCICLOPÉDIA ESTRATÉGICA NAPOLE",
+          "expires_at": "2026-03-18T22:12:31.833310116Z"
         },
         {
-          "name": "files/s8krxnwcknb7",
+          "name": "files/x8epk5mj8mej",
           "displayName": "Estratégia Empresarial: Da Economia Real ao Digital",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/s8krxnwcknb7",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/x8epk5mj8mej",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/Estratégia Empresarial: Da Economia Real ao Digital"
+          "localPath": "Antonio Napole/analysis/Estratégia Empresarial: Da Economia Real ao Digital",
+          "expires_at": "2026-03-18T22:12:33.511157758Z"
         },
         {
-          "name": "files/jrkc1jlrppsq",
+          "name": "files/dib2aop1fsxv",
           "displayName": "Key Insights on Antônio Napole D'Andréa Neto",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/jrkc1jlrppsq",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/dib2aop1fsxv",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/Key Insights on Antônio Napole D'Andréa Neto"
+          "localPath": "Antonio Napole/analysis/Key Insights on Antônio Napole D'Andréa Neto",
+          "expires_at": "2026-03-18T22:12:35.796542561Z"
         },
         {
-          "name": "files/znkbzf9q22hy",
+          "name": "files/alvkb7ea5aj5",
           "displayName": "Pesquisa Aprofundada – Antônio Napole (Estrategista de Negócios, Inteligência Competitiva)",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/znkbzf9q22hy",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/alvkb7ea5aj5",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/Pesquisa Aprofundada – Antônio Napole (Estrategista de Negócios, Inteligência Competitiva)"
+          "localPath": "Antonio Napole/analysis/Pesquisa Aprofundada – Antônio Napole (Estrategista de Negócios, Inteligência Competitiva)",
+          "expires_at": "2026-03-18T22:12:37.916473794Z"
         },
         {
-          "name": "files/3fii4t3ijcbe",
+          "name": "files/x3qhrx1b8ayl",
           "displayName": "Relatório de Inteligência Estratégica: O Ecossistema e a Metodologia de Antônio Napole",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/3fii4t3ijcbe",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/x3qhrx1b8ayl",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/Relatório de Inteligência Estratégica: O Ecossistema e a Metodologia de Antônio Napole"
+          "localPath": "Antonio Napole/analysis/Relatório de Inteligência Estratégica: O Ecossistema e a Metodologia de Antônio Napole",
+          "expires_at": "2026-03-18T22:12:40.042853974Z"
         },
         {
-          "name": "files/bz4phljwl67z",
+          "name": "files/soqmpc49f472",
           "displayName": "SISTEMA IMUNOLÓGICO COGNITIVO: ANTÔNIO NAPOLE",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/bz4phljwl67z",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/soqmpc49f472",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/analysis/SISTEMA IMUNOLÓGICO COGNITIVO: ANTÔNIO NAPOLE"
+          "localPath": "Antonio Napole/analysis/SISTEMA IMUNOLÓGICO COGNITIVO: ANTÔNIO NAPOLE",
+          "expires_at": "2026-03-18T22:12:41.514276722Z"
         },
         {
-          "name": "files/rp47ir23p8xm",
+          "name": "files/d5cl69ueoo5j",
           "displayName": "overview",
-          "uri": "https://generativelanguage.googleapis.com/v1beta/files/rp47ir23p8xm",
+          "uri": "https://generativelanguage.googleapis.com/v1beta/files/d5cl69ueoo5j",
           "mimeType": "text/plain",
-          "localPath": "Antonio Napole/overview"
+          "localPath": "Antonio Napole/overview",
+          "expires_at": "2026-03-18T22:12:43.008549399Z"
         }
       ],
-      "last_updated": "2026-03-06T16:31:19.566Z"
+      "last_updated": "2026-03-16T22:12:43.745Z"
     }
   }
 }
