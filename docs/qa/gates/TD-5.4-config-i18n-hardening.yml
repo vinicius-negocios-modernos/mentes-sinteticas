@@ -1,0 +1,98 @@
+storyId: TD-5.4
+title: Config & i18n hardening (Tema G — SYS-5/6/8/13)
+verdict: CONCERNS
+reviewer: Quinn (@qa)
+date: 2026-05-31
+status_after: Done
+
+summary: >
+  build/test/lint all green. SYS-5 env fail-fast is correct, build-safe, and leaks
+  no secret values. SYS-8 chat contract is provably unchanged (route.test.ts 16/16).
+  SYS-6 defaults match prior hardcoded values. SYS-13 chat strings are byte-identical.
+  CONCERNS (not PASS) only because UX-5 + SYS-13 backend-remainder are carried forward
+  to TD-5.4b — intentional, tracked deferrals, not defects.
+
+gate_pipeline:
+  build:
+    command: npm run build
+    result: PASS
+    evidence: "21/21 pages generated with GEMINI_API_KEY/DATABASE_URL/AUTH_SECRET/NEXTAUTH_SECRET all unset — build-safety proven"
+  test:
+    command: vitest run --maxWorkers=2
+    result: PASS
+    total: 358
+    passed: 358
+    files: 28
+    new_env_tests: 8
+    chat_contract_tests: 16
+  lint:
+    command: npm run lint
+    result: PASS
+    exit_code: 0
+    errors: 0
+    warnings: 9
+    note: "all 9 warnings pre-existing, none in files touched by this increment"
+
+security_review:
+  SYS-5_env_fail_fast:
+    correct: true
+    build_safe: true
+    lists_names_not_values: true
+    secret_leak: false
+    auth_secret_or_nextauth_secret: true
+    detail: >
+      validateEnv() aggregates envSchema + authEnvSchema failures, emitting only
+      path (variable name) + zod message. No secret values interpolated. Boot hook
+      in instrumentation.ts guarded by NEXT_RUNTIME === 'nodejs' — never runs at
+      build/edge.
+  SYS-8_chat_contract:
+    changed: false
+    evidence: "route.test.ts 16/16 PASS — 404→Mente, 500→Chave, 500→Erro, 429→minuto/hora, 401→login, 404→Conversa"
+    branches:
+      not_found: "404 / api.mindNotFound (unchanged)"
+      gemini_api_key: "500 / api.apiKeyMissing (targeted rawMessage.includes — config concern, documented)"
+      generic: "500 / api.chatProcessing (unchanged)"
+      rate_limit: "429 (unchanged)"
+  SYS-6_defaults_preserved:
+    preserved: true
+    values:
+      MAX_FILE_URIS_PER_REQUEST: 8
+      RATE_LIMIT_PER_MINUTE: 20
+      RATE_LIMIT_PER_HOUR: 200
+      TOKEN_DAILY_LIMIT: 500000
+      TOKEN_MONTHLY_LIMIT: 5000000
+    detail: "consumers (knowledge.ts, rate-limiter.ts, ai/config.ts) fall back to CONFIG_DEFAULTS when env unset — behavior identical"
+  SYS-13_chat_i18n:
+    byte_identical: true
+    detail: "pt-BR api namespace strings match prior hardcoded PT-BR; no client-visible text change"
+
+issues: []
+
+carry_forward:
+  - id: UX-5
+    severity: low
+    category: i18n
+    description: "Frontend t() migration (~16-24h) — no frontend component string touched this increment"
+    target_story: TD-5.4b
+  - id: SYS-13-backend-rest
+    severity: low
+    category: i18n
+    description: "5 backend routes (debate, conversations/share, memories, actions.ts) still carry hardcoded PT-BR; lack contract tests"
+    target_story: TD-5.4b
+
+debts_resolved:
+  - SYS-5
+  - SYS-6
+  - SYS-8
+  - SYS-13-chat
+
+files_reviewed:
+  - src/lib/config.ts
+  - instrumentation.ts
+  - src/app/api/chat/route.ts
+  - src/app/api/chat/__tests__/route.test.ts
+  - src/lib/__tests__/config.test.ts
+  - src/lib/services/rate-limiter.ts
+  - src/lib/ai/config.ts
+  - src/lib/ai/knowledge.ts
+  - src/lib/i18n/messages/pt-BR.ts

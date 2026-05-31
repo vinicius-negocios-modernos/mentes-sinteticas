@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONFIG_DEFAULTS } from "@/lib/config";
 
 /**
  * Zod schema for validating and coercing AI model configuration values.
@@ -40,8 +41,14 @@ export const AI_PRESETS = {
 
 /** Daily and monthly token budget limits per user, configurable via env vars. */
 export const TOKEN_LIMITS = {
-  daily: parseInt(process.env.TOKEN_DAILY_LIMIT ?? "500000", 10),
-  monthly: parseInt(process.env.TOKEN_MONTHLY_LIMIT ?? "5000000", 10),
+  daily: parseInt(
+    process.env.TOKEN_DAILY_LIMIT ?? String(CONFIG_DEFAULTS.TOKEN_DAILY_LIMIT),
+    10
+  ),
+  monthly: parseInt(
+    process.env.TOKEN_MONTHLY_LIMIT ?? String(CONFIG_DEFAULTS.TOKEN_MONTHLY_LIMIT),
+    10
+  ),
 } as const;
 
 let _aiConfig: AIModelConfig | null = null;

@@ -4,15 +4,9 @@ import path from "path";
 import type { MindData, Manifest } from "@/lib/types";
 import { ManifestSchema } from "@/lib/validations/manifest";
 import { logger } from "@/lib/logger";
+import { getConfig } from "@/lib/config";
 
 const MANIFEST_PATH = path.join(process.cwd(), "data", "minds_manifest.json");
-
-/**
- * Maximum number of file URIs to send per Gemini request.
- * Gemini free tier has aggressive rate limits on input tokens per minute.
- * Core knowledge modules (M1-M8) are prioritized over analysis documents.
- */
-const MAX_FILE_URIS_PER_REQUEST = 8;
 
 // ── Manifest-based file URI reading (legacy fallback) ───────────────
 
@@ -162,13 +156,18 @@ export async function getFileUrisFromDb(mindName: string): Promise<FileUriEntry[
 export async function getFileParts(
   mindName: string
 ): Promise<{ fileData: { mimeType: string; fileUri: string } }[]> {
+  // SYS-6: max URIs per request comes from validated config (env-tunable).
+  // Gemini free tier has aggressive rate limits on input tokens per minute;
+  // core knowledge modules (M1-M8) are prioritized over analysis documents.
+  const maxFileUris = getConfig().MAX_FILE_URIS_PER_REQUEST;
+
   // Try DB first
   const dbEntries = await getFileUrisFromDb(mindName);
   if (dbEntries && dbEntries.length > 0) {
-    const cappedEntries = dbEntries.slice(0, MAX_FILE_URIS_PER_REQUEST);
-    if (dbEntries.length > MAX_FILE_URIS_PER_REQUEST) {
+    const cappedEntries = dbEntries.slice(0, maxFileUris);
+    if (dbEntries.length > maxFileUris) {
       logger.info(
-        `Capped file URIs from ${dbEntries.length} to ${MAX_FILE_URIS_PER_REQUEST} for mind "${mindName}"`
+        `Capped file URIs from ${dbEntries.length} to ${maxFileUris} for mind "${mindName}"`
       );
     }
     return cappedEntries.map((e) => ({
@@ -183,7 +182,7 @@ export async function getFileParts(
   const mindData = await getMindManifest(mindName);
   if (!mindData) return [];
 
-  const cappedFiles = mindData.files.slice(0, MAX_FILE_URIS_PER_REQUEST);
+  const cappedFiles = mindData.files.slice(0, maxFileUris);
   return cappedFiles.map((f) => ({
     fileData: {
       mimeType: f.mimeType,

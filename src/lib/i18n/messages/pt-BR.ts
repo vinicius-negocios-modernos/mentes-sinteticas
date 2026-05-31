@@ -274,6 +274,23 @@ export const messages = {
     generic: "Erro ao processar mensagem.",
     streamUnavailable: "Stream not available",
   },
+
+  // Server-returned messages (backend API routes / services — SYS-13).
+  api: {
+    sessionExpired: "Sessao expirada. Faca login novamente.",
+    rateLimited:
+      "Limite de {maxAllowed} mensagens por {window} atingido. Tente novamente em {retryAfter} segundos.",
+    perMinute: "minuto",
+    perHour: "hora",
+    tokenDailyLimit:
+      "Voce atingiu o limite de uso diario de tokens. Tente novamente amanha.",
+    tokenMonthlyLimit:
+      "Voce atingiu o limite de uso mensal de tokens. Tente novamente no proximo mes.",
+    conversationNotFound: "Conversa nao encontrada ou acesso negado.",
+    mindNotFound: "Mente nao encontrada.",
+    apiKeyMissing: "Chave da API nao configurada.",
+    chatProcessing: "Erro ao processar sua mensagem. Tente novamente.",
+  },
 } as const;
 
 export type Messages = typeof messages;

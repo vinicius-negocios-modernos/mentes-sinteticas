@@ -1,6 +1,7 @@
 import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { rateLimits } from "@/db/schema/rate-limits";
+import { CONFIG_DEFAULTS } from "@/lib/config";
 
 // ── Configuration ─────────────────────────────────────────────────────
 
@@ -11,15 +12,28 @@ export interface RateLimitConfig {
   windowSeconds: number;
 }
 
-/** Default rate limits — configurable via env vars */
+/**
+ * Default rate limits — SYS-6: numeric defaults come from the single
+ * source-of-truth `CONFIG_DEFAULTS` (shared with the Zod env schema), and
+ * remain env-tunable via RATE_LIMIT_PER_MINUTE / RATE_LIMIT_PER_HOUR.
+ *
+ * Evaluated at module load (no config validation here) so it stays
+ * build-safe and the public `DEFAULT_LIMITS` contract is preserved.
+ */
 export const DEFAULT_LIMITS = {
   sendMessage: {
     perMinute: {
-      maxRequests: parseInt(process.env.RATE_LIMIT_PER_MINUTE ?? "20", 10),
+      maxRequests: parseInt(
+        process.env.RATE_LIMIT_PER_MINUTE ?? String(CONFIG_DEFAULTS.RATE_LIMIT_PER_MINUTE),
+        10
+      ),
       windowSeconds: 60,
     },
     perHour: {
-      maxRequests: parseInt(process.env.RATE_LIMIT_PER_HOUR ?? "200", 10),
+      maxRequests: parseInt(
+        process.env.RATE_LIMIT_PER_HOUR ?? String(CONFIG_DEFAULTS.RATE_LIMIT_PER_HOUR),
+        10
+      ),
       windowSeconds: 3600,
     },
   },

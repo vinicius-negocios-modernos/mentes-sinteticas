@@ -30,6 +30,8 @@ import { createMessage } from "@/lib/services/messages";
 import type { ModelMessage } from "@ai-sdk/provider-utils";
 
 import { logger } from "@/lib/logger";
+import { classifyError, ErrorCode } from "@/lib/errors";
+import { t } from "@/lib/i18n";
 
 export async function POST(request: Request) {
   try {
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Sessao expirada. Faca login novamente." },
+        { error: t("api.sessionExpired") },
         { status: 401 }
       );
     }
@@ -82,7 +84,14 @@ export async function POST(request: Request) {
     if (!rateLimitResult.allowed) {
       return Response.json(
         {
-          error: `Limite de ${rateLimitResult.maxAllowed} mensagens por ${rateLimitResult.limitType === "per-minute" ? "minuto" : "hora"} atingido. Tente novamente em ${rateLimitResult.retryAfterSeconds} segundos.`,
+          error: t("api.rateLimited", {
+            maxAllowed: String(rateLimitResult.maxAllowed),
+            window:
+              rateLimitResult.limitType === "per-minute"
+                ? t("api.perMinute")
+                : t("api.perHour"),
+            retryAfter: String(rateLimitResult.retryAfterSeconds),
+          }),
         },
         { status: 429 }
       );
@@ -96,10 +105,7 @@ export async function POST(request: Request) {
 
     if (TOKEN_LIMITS.daily > 0 && dailyUsage.totalTokens >= TOKEN_LIMITS.daily) {
       return Response.json(
-        {
-          error:
-            "Voce atingiu o limite de uso diario de tokens. Tente novamente amanha.",
-        },
+        { error: t("api.tokenDailyLimit") },
         { status: 429 }
       );
     }
@@ -109,10 +115,7 @@ export async function POST(request: Request) {
       monthlyUsage.totalTokens >= TOKEN_LIMITS.monthly
     ) {
       return Response.json(
-        {
-          error:
-            "Voce atingiu o limite de uso mensal de tokens. Tente novamente no proximo mes.",
-        },
+        { error: t("api.tokenMonthlyLimit") },
         { status: 429 }
       );
     }
@@ -138,7 +141,7 @@ export async function POST(request: Request) {
       const existing = await getConversationById(activeConversationId, userId);
       if (!existing) {
         return Response.json(
-          { error: "Conversa nao encontrada ou acesso negado." },
+          { error: t("api.conversationNotFound") },
           { status: 404 }
         );
       }
@@ -271,21 +274,33 @@ export async function POST(request: Request) {
       headers: responseHeaders,
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    // SYS-8: classify via the AppError taxonomy instead of ad-hoc string
+    // matching. Observable contract is preserved — each branch returns the
+    // SAME HTTP status and user message the client received before.
+    const appError = classifyError(error);
+    const rawMessage =
+      error instanceof Error ? error.message : String(error);
 
-    if (msg.includes("not found")) {
-      return Response.json({ error: "Mente nao encontrada." }, { status: 404 });
+    // Resource-not-found (e.g. mind lookup) → 404, same message as before.
+    if (appError.code === ErrorCode.NOT_FOUND) {
+      return Response.json({ error: t("api.mindNotFound") }, { status: 404 });
     }
-    if (msg.includes("GEMINI_API_KEY")) {
+
+    // Config-specific: missing Gemini key. Not a taxonomy category — it is a
+    // boot/config concern, so we keep a targeted check (not classification).
+    if (rawMessage.includes("GEMINI_API_KEY")) {
       return Response.json(
-        { error: "Chave da API nao configurada." },
+        { error: t("api.apiKeyMissing") },
         { status: 500 }
       );
     }
 
-    logger.error("Streaming chat error:", error instanceof Error ? error : new Error(String(error)));
+    logger.error(
+      "Streaming chat error:",
+      error instanceof Error ? error : new Error(String(error))
+    );
     return Response.json(
-      { error: "Erro ao processar sua mensagem. Tente novamente." },
+      { error: t("api.chatProcessing") },
       { status: 500 }
     );
   }
