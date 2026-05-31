@@ -6,12 +6,18 @@ import {
   timestamp,
   index,
 } from "drizzle-orm/pg-core";
+import { users } from "./users";
 
+// TD-3.1 target state — FK applied to PROD via scripts/db-migrate/td-3.1-*.sql
+// (NOT VALID + VALIDATE), not via drizzle-kit migrate.
 export const rateLimits = pgTable(
   "rate_limits",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").notNull(),
+    // DB-2: FK to users (ON DELETE CASCADE — ephemeral data).
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     action: text("action").notNull(),
     windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
     requestCount: integer("request_count").notNull().default(1),

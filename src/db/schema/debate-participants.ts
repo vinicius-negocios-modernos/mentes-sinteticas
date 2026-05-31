@@ -15,9 +15,12 @@ export const debateParticipants = pgTable(
     debateId: uuid("debate_id")
       .notNull()
       .references(() => debates.id, { onDelete: "cascade" }),
+    // DB-15: explicit RESTRICT — block deleting a mind that participates in a
+    // debate. Re-stated from the implicit "no action" of migration 0002 via
+    // scripts/db-migrate/td-3.1-04-fks-add-notvalid.sql.
     mindId: uuid("mind_id")
       .notNull()
-      .references(() => minds.id),
+      .references(() => minds.id, { onDelete: "restrict" }),
     turnOrder: integer("turn_order").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

@@ -1,0 +1,139 @@
+# Quality Gate — TD-3.1 Schema Hardening (Tema C / Wave W3)
+storyId: TD-3.1
+title: Schema Hardening — destrava cache Gemini (DB-5) + integridade referencial
+reviewer: Quinn (@qa)
+review_type: adversarial-safety-review (pre-maintenance-window, scripts NOT applied to prod)
+date: 2026-05-31
+verdict: CONCERNS
+
+summary: >
+  All 6 prod-safe DDL scripts + remediation + rollbacks are correctly authored:
+  CONCURRENTLY isolated from transactions, dedupe/orphan gates ordered before
+  UNIQUE/FK, NOT VALID + VALIDATE pattern applied, every forward step has a tested
+  rollback, runbook has explicit go/no-go checkpoints with a mandatory backup
+  first. Build PASS, 350/350 tests PASS, lint 0 errors. The Drizzle trap IS
+  documented (story + runbook + per-schema-file comments) but is NOT guarded at
+  the single most-likely entry point (the drizzle/ directory) and the post-window
+  journal reconciliation is left as a manual hand-edit rather than a baselined
+  no-op migration. Safe to COMMIT and to EXECUTE in the window, with the must-dos
+  below tracked.
+
+adversarial_checks:
+  - id: 1
+    name: CONCURRENTLY safety (no tx wrapper, invalid-index recovery)
+    result: PASS
+    evidence: >
+      02 + 03 carry all CREATE [UNIQUE] INDEX CONCURRENTLY, both have NO BEGIN/COMMIT,
+      explicit "DO NOT WRAP" banners, only \set ON_ERROR_STOP. 04/06 use BEGIN/COMMIT
+      but contain only tx-legal ADD CONSTRAINT NOT VALID / ALTER COLUMN / DROP; 06's
+      VALIDATEs are correctly outside COMMIT. Both 02 and 03 end with an indisvalid
+      verification query + runbook says DROP-invalid-and-retry. Runbook warns against
+      -1/--single-transaction on 02/03/05.
+  - id: 2
+    name: DEDUPE before UNIQUE ordering + safe-fail if skipped
+    result: PASS
+    evidence: >
+      01 dedupes file_uri_cache (keep MAX(created_at)) then asserts v_dups=0 via
+      RAISE EXCEPTION in the same tx. Runbook sequences 01 (step 2) strictly before
+      03 (step 4) with GO checkpoints. Skipping 01 => 03 builds an INVALID index
+      (caught by validity check), no corruption. Fails safe.
+  - id: 3
+    name: ORPHAN before FK; token_usage SET NULL nullability; RESTRICT policy
+    result: PASS
+    evidence: >
+      04 runs ALTER token_usage DROP NOT NULL before the SET NULL FK ADD (same tx).
+      debate_participants.mind_id = RESTRICT matches db-specialist-review DB-15.
+      conversations/mind_memories/debates/rate_limits = CASCADE, token_usage = SET NULL
+      = exactly the agreed §5 policy. VALIDATE failures are per-statement, ON_ERROR_STOP,
+      independently re-runnable after cleaning orphans.
+    note: >
+      01 only REPORTS (RAISE NOTICE, non-blocking) token_usage and messages.mind_slug
+      orphans; if the operator ignores those notices, 05's VALIDATE for that table
+      errors — recoverable (fix orphan, re-run that ALTER) and documented, but the
+      gate is a soft notice not a hard abort for those two.
+  - id: 4
+    name: THE DRIZZLE TRAP (future drizzle-kit generate)
+    result: CONCERNS
+    evidence: >
+      Trap is documented in 3 places: story Dev Notes (do NOT apply naive 0003),
+      runbook "Drizzle reconciliation" section (full rationale + --custom guidance),
+      and per-schema-file header comments. Schema target state matches the scripts
+      exactly (file-uri-cache unique, FKs, CHECKs, token_usage.user_id nullable,
+      RESTRICT). Failure mode if a dev runs drizzle-kit generate: it diffs schema
+      (target) vs journal-snapshot 0002 (pre-hardening) and emits a 0003 that re-adds
+      every TD-3.1 object NON-CONCURRENTLY + plain ADD CONSTRAINT (table-locking) and
+      DOUBLE-APPLIES objects prod already has => errors / lock risk.
+    gaps:
+      - No drizzle/README.md guard at the most-likely entry point (the drizzle/ dir).
+        A dev working in drizzle/ need not see schema-file comments or the runbook.
+      - Post-window journal reconciliation relies on a human remembering to hand-edit
+        TD-3.1 objects out of a --custom 0003. Safer: a baselined 0003 with all
+        statements guarded (IF NOT EXISTS / catalog-checked no-ops) recorded as applied
+        in __drizzle_migrations, so a future generate diffs from the TRUE target and
+        the journal reflects reality.
+    recommended_safest_path: >
+      After the prod scripts succeed in-window, author a single guarded baseline
+      migration drizzle/0003_td_3_1_baseline.sql (every statement IF NOT EXISTS /
+      catalog-guarded => a no-op on a DB that already ran the scripts) and let
+      drizzle-kit migrate record it (clean no-op on prod, applies the same guarded
+      DDL on any fresh/staging DB). This makes the journal == reality and a future
+      drizzle-kit generate baselines from 0003 with zero TD-3.1 drift. Add a
+      drizzle/README.md pointing at the runbook. Until that baseline exists, the
+      trap is mitigated by docs only.
+  - id: 5
+    name: Idempotency / partial-failure re-runnability
+    result: PASS
+    evidence: >
+      01 (DELETE re-matches nothing, UPDATE WHERE-guarded, assertions), 02/03 (IF NOT
+      EXISTS), 04/06 (pg_constraint catalog guards), 05 (VALIDATE no-op once validated).
+      ON_ERROR_STOP halts on first error; each script independently re-runnable.
+  - id: 6
+    name: Rollback completeness (DROP INDEX CONCURRENTLY; irreversibility flagged)
+    result: PASS
+    evidence: >
+      Every forward step has a rollback. 02/03 rollbacks use DROP INDEX CONCURRENTLY
+      IF EXISTS (no tx, also clears INVALID leftovers). 04/05/06 use tx DROP CONSTRAINT.
+      05 rollback correctly notes Postgres has no de-validate => DROP + re-ADD NOT VALID.
+      04 rollback restores DB-15 baseline FK + conditionally re-NOT-NULLs token_usage.
+      01 (destructive dedupe/NFC backfill/rate_limits delete) is correctly flagged as
+      pg_dump-only recovery.
+  - id: 7
+    name: Runbook go/no-go gates + mandatory first backup
+    result: PASS
+    evidence: >
+      Runbook has 8 numbered steps, each with a CHECKPOINT/GO criterion and a ROLLBACK
+      pointer. Step 0 = mandatory pg_dump backup, first. Audit step 1 has explicit NO-GO
+      on unexplained conversations/debates/mind_memories orphans.
+
+verification:
+  build: PASS
+  tests: 350/350 PASS (28 suites)
+  lint: 0 errors, 9 pre-existing warnings (none in TD-3.1 files)
+  ci_greenable: true
+  prod_touched: false
+
+must_do_before_execute:
+  - severity: medium
+    category: maintainability
+    description: >
+      Drizzle trap guarded only by docs. After the window, add a guarded baseline
+      drizzle/0003_td_3_1_baseline.sql recorded in __drizzle_migrations + a
+      drizzle/README.md, so a future drizzle-kit generate cannot emit a double-applying
+      non-concurrent 0003.
+    owner: "@data-engineer"
+    blocking_for_window: false
+  - severity: low
+    category: data
+    description: >
+      Before step 05 VALIDATE, the operator MUST act on (not just read) the step-01
+      RAISE NOTICE for token_usage user_id orphans and messages.mind_slug orphans —
+      decide SET NULL / fix — or that VALIDATE will error. Consider promoting those two
+      notices to a hard pre-05 gate in a future revision.
+    owner: "operator (in-window) / @data-engineer (future)"
+    blocking_for_window: false
+
+gate_policy_note: >
+  CONCERNS = safe to commit and to execute the window with the must-dos tracked.
+  No script can corrupt or long-lock prod (CONCURRENTLY online, NOT VALID fast,
+  dedupe/orphan gated and pg_dump-backed). Re-gate to PASS once the baseline
+  0003 + drizzle/README.md land.
