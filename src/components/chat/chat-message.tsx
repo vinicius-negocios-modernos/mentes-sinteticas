@@ -13,50 +13,13 @@ import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 import { CodeBlock } from "./code-block";
 import { CollapsibleMessage } from "./collapsible-message";
-
-/* ---------- Lazy-load KaTeX CSS ---------- */
-let katexCssLoaded = false;
-function ensureKatexCss() {
-  if (katexCssLoaded || typeof document === "undefined") return;
-  katexCssLoaded = true;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css";
-  link.crossOrigin = "anonymous";
-  document.head.appendChild(link);
-}
-
-/* ---------- Lazy-load highlight.js theme CSS ---------- */
-let hljsCssLoaded = false;
-function ensureHljsCss() {
-  if (hljsCssLoaded || typeof document === "undefined") return;
-  hljsCssLoaded = true;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href =
-    "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css";
-  link.crossOrigin = "anonymous";
-  document.head.appendChild(link);
-}
-
-/* ---------- Helpers ---------- */
-
-function getInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-function formatTimestamp(date: Date): string {
-  return new Date(date).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import {
+  ensureKatexCss,
+  ensureHljsCss,
+  getInitials,
+  formatTimestamp,
+  extractText,
+} from "./chat-message-helpers";
 
 /* ---------- remark / rehype plugin arrays (stable refs) ---------- */
 
@@ -64,19 +27,6 @@ const remarkPlugins = [remarkGfm, remarkMath];
 const rehypePlugins = [rehypeKatex, rehypeHighlight];
 
 /* ---------- Custom ReactMarkdown components ---------- */
-
-/**
- * Extract raw text from React children tree (for code blocks).
- */
-function extractText(node: React.ReactNode): string {
-  if (typeof node === "string") return node;
-  if (typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(extractText).join("");
-  if (node && typeof node === "object" && "props" in node) {
-    return extractText((node as React.ReactElement<{ children?: React.ReactNode }>).props.children);
-  }
-  return "";
-}
 
 const markdownComponents: Components = {
   // --- Code blocks (fenced) and inline code ---

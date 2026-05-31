@@ -1,38 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { WifiOff } from "lucide-react";
 import { t } from "@/lib/i18n";
+import { useOfflineStatus } from "@/hooks/use-online-status";
 
 /**
  * Banner that appears at the top of the page when the user goes offline.
  * Disappears automatically when connectivity is restored.
  *
- * Uses `navigator.onLine` for initial state and listens to
- * `online`/`offline` events for real-time changes.
+ * Subscribes to the browser connectivity store via `useSyncExternalStore`
+ * (MNT-001 / TD-5.5): `navigator.onLine` is the snapshot and `online`/`offline`
+ * window events drive updates. The server snapshot assumes online, so no banner
+ * is rendered during SSR and there is no hydration mismatch.
  */
 export function OfflineIndicator() {
-  const [isOffline, setIsOffline] = useState(false);
-
-  useEffect(() => {
-    // Set initial state (only on client). Legitimate external-system sync:
-    // navigator.onLine is unavailable during SSR, so the real value must be
-    // read post-mount. This is a deliberate sync to a browser API, not derived
-    // render state — see lint-followup in TD-2.1 for useSyncExternalStore migration.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing initial value from navigator.onLine (external browser API, SSR-unsafe)
-    setIsOffline(!navigator.onLine);
-
-    const handleOffline = () => setIsOffline(true);
-    const handleOnline = () => setIsOffline(false);
-
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
-
-    return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-    };
-  }, []);
+  const isOffline = useOfflineStatus();
 
   if (!isOffline) return null;
 

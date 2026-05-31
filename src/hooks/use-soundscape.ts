@@ -124,9 +124,18 @@ export interface UseSoundscapeReturn {
  */
 export function useSoundscape(mindSlug: string | null): UseSoundscapeReturn {
   const engineRef = useRef<SoundscapeEngine | null>(null);
-  const [volume, setVolumeState] = useState(DEFAULT_PREFS.volume);
-  const [muted, setMuted] = useState(DEFAULT_PREFS.muted);
-  const [enabled, setEnabled] = useState(DEFAULT_PREFS.enabled);
+  // Hydrate volume/muted/enabled from persisted localStorage prefs via lazy
+  // useState initializers (MNT-001 / TD-5.5). `loadPrefs()` is SSR-safe — it
+  // returns DEFAULT_PREFS when `window` is undefined — so the server and first
+  // client render agree on defaults and the real prefs seed the client state
+  // synchronously without a setState-in-effect. These remain React-owned
+  // mutable state (changed by setVolume/toggleMute/toggleEnabled), so
+  // useSyncExternalStore would be the wrong tool: it would pin the value to the
+  // store snapshot and break user mutations. One-shot hydration is the correct
+  // semantics here. `useState(fn)` runs the initializer only on first render.
+  const [volume, setVolumeState] = useState(() => loadPrefs().volume);
+  const [muted, setMuted] = useState(() => loadPrefs().muted);
+  const [enabled, setEnabled] = useState(() => loadPrefs().enabled);
   const [playing, setPlaying] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [reducedMotionMuted, setReducedMotionMuted] = useState(false);
@@ -149,28 +158,23 @@ export function useSoundscape(mindSlug: string | null): UseSoundscapeReturn {
     const engine = new SoundscapeEngine();
     engineRef.current = engine;
 
-    // Apply loaded prefs
+    // Apply loaded prefs to the engine. React state (volume/muted/enabled) was
+    // already hydrated from the same prefs via the lazy useState initializers
+    // above (MNT-001 / TD-5.5), so no setState-in-effect is needed to mirror
+    // them here.
     engine.setVolume(prefs.volume);
     engine.setEnabled(prefs.enabled);
 
-    // Legitimate external-system sync: prefs come from localStorage, which is
-    // SSR-unsafe and must be read post-mount. These setState calls hydrate React
-    // state from persisted preferences after engine init — not derivable during
-    // render (depends on SoundscapeEngine.isAvailable + feature flag). lint-followup (TD-2.1).
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating state from localStorage prefs post-mount (SSR-unsafe external system)
-    setVolumeState(prefs.volume);
-    setEnabled(prefs.enabled);
-
-    // If prefers-reduced-motion, force mute by default
+    // prefers-reduced-motion is a render-time-unsafe media query resolved
+    // post-mount; forcing mute here is a genuine engine side-effect, so the
+    // reducedMotion mute path stays in the effect.
     if (isReducedMotion && !prefs.muted) {
       engine.mute();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reduced-motion mute is a post-mount media-query-driven engine side-effect, not derivable during render
       setMuted(true);
       setReducedMotionMuted(true);
-    } else {
-      if (prefs.muted) {
-        engine.mute();
-      }
-      setMuted(prefs.muted);
+    } else if (prefs.muted) {
+      engine.mute();
     }
 
     return () => {

@@ -32,6 +32,24 @@ import type { ModelMessage } from "@ai-sdk/provider-utils";
 import { logger } from "@/lib/logger";
 import { classifyError, ErrorCode } from "@/lib/errors";
 import { t } from "@/lib/i18n";
+import { runBackground } from "@/lib/retry";
+
+/**
+ * Report an exhausted-retry background side-effect failure to Sentry.
+ * Tags the failing side-effect and attaches non-sensitive context only
+ * (no message content, no tokens, no PII).
+ */
+function alertSideEffectFailure(
+  sideEffect: string,
+  context: Record<string, string | number>
+) {
+  return (error: Error, attempts: number) => {
+    Sentry.captureException(error, {
+      tags: { side_effect: sideEffect },
+      extra: { ...context, attempts },
+    });
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -154,8 +172,11 @@ export async function POST(request: Request) {
 
     // ── Step 7: Increment rate limit counter ──────────────────────
     await incrementRateLimit(userId, "sendMessage");
-    cleanupExpiredLimits().catch(() => {
-      // Cleanup failure is non-critical
+    // Fire-and-forget cleanup: retries with backoff, alerts Sentry on exhaustion.
+    void runBackground(() => cleanupExpiredLimits(), {
+      label: "cleanupExpiredLimits",
+      retries: 2,
+      onFinalFailure: alertSideEffectFailure("cleanupExpiredLimits", {}),
     });
 
     // ── Step 8: Fetch memories & build system prompt ──────────────
@@ -216,19 +237,26 @@ export async function POST(request: Request) {
                 usage.inputTokens,
                 usage.outputTokens
               );
-              recordUsage({
-                userId,
-                conversationId: capturedConversationId,
-                inputTokens: usage.inputTokens,
-                outputTokens: usage.outputTokens,
-                model: model ?? "gemini-2.0-flash",
-                costUsd,
-              }).catch((err) => {
-                logger.error(
-                  "Failed to record token usage:",
-                  err instanceof Error ? err : new Error(String(err))
-                );
-              });
+              // Fire-and-forget: retries with backoff, alerts Sentry on exhaustion.
+              void runBackground(
+                () =>
+                  recordUsage({
+                    userId,
+                    conversationId: capturedConversationId,
+                    inputTokens: usage.inputTokens,
+                    outputTokens: usage.outputTokens,
+                    model: model ?? "gemini-2.0-flash",
+                    costUsd,
+                  }),
+                {
+                  label: "recordUsage",
+                  retries: 2,
+                  onFinalFailure: alertSideEffectFailure("recordUsage", {
+                    conversationId: capturedConversationId,
+                    model: model ?? "gemini-2.0-flash",
+                  }),
+                }
+              );
             }
 
             // Extract and save memories (fire-and-forget)
@@ -238,23 +266,31 @@ export async function POST(request: Request) {
                 { role: "user" as const, content: sanitizedMessage },
                 { role: "assistant" as const, content: text },
               ];
-              extractMemories(validatedMindName, conversationForMemory)
-                .then((extracted) => {
+              // Fire-and-forget: retries with backoff, alerts Sentry on exhaustion.
+              void runBackground(
+                async () => {
+                  const extracted = await extractMemories(
+                    validatedMindName,
+                    conversationForMemory
+                  );
                   if (extracted.length > 0) {
-                    return saveMemories(
+                    await saveMemories(
                       userId,
                       mindDbId,
                       extracted,
                       capturedConversationId
                     );
                   }
-                })
-                .catch((err) => {
-                  logger.error(
-                    "Failed to extract/save memories:",
-                    err instanceof Error ? err : new Error(String(err))
-                  );
-                });
+                },
+                {
+                  label: "extractMemories",
+                  retries: 2,
+                  onFinalFailure: alertSideEffectFailure("extractMemories", {
+                    conversationId: capturedConversationId,
+                    mindId: mindDbId,
+                  }),
+                }
+              );
             }
           },
         });

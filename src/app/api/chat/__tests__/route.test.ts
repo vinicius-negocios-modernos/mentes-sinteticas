@@ -91,8 +91,11 @@ vi.mock("@/lib/ai/pricing", () => ({
   calculateCost: vi.fn(() => 0.001),
 }));
 
+const mockCaptureException = vi.hoisted(() => vi.fn());
+
 vi.mock("@sentry/nextjs", () => ({
   startSpan: vi.fn((_opts: unknown, fn: () => unknown) => fn()),
+  captureException: mockCaptureException,
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -351,6 +354,53 @@ describe("POST /api/chat", () => {
         "AI response text"
       );
       expect(mockTouchConversation).toHaveBeenCalledWith(CONV_ID);
+    });
+
+    it("alerts Sentry when the recordUsage side-effect exhausts its retries", async () => {
+      setupAuthenticatedAndAllowed();
+      setupMindAndConversation();
+
+      // Side-effect always fails → should retry then alert Sentry.
+      mockRecordUsage.mockRejectedValue(new Error("usage db down"));
+
+      let capturedOnFinish: (args: {
+        text: string;
+        usage?: { inputTokens: number; outputTokens: number };
+        model?: string;
+      }) => Promise<void>;
+      mockStreamMindChat.mockImplementation(
+        async (opts: { onFinish: typeof capturedOnFinish }) => {
+          capturedOnFinish = opts.onFinish;
+          return {
+            toTextStreamResponse: ({
+              headers,
+            }: {
+              headers: Record<string, string>;
+            }) => new Response("stream", { status: 200, headers }),
+          };
+        }
+      );
+
+      await POST(makeRequest(validBody()));
+
+      vi.useFakeTimers();
+      // onFinish triggers the fire-and-forget recordUsage retry chain.
+      await capturedOnFinish!({
+        text: "AI response text",
+        usage: { inputTokens: 50, outputTokens: 100 },
+        model: "gemini-2.0-flash",
+      });
+      // Flush all backoff timers (200ms + 400ms for 2 retries).
+      await vi.advanceTimersByTimeAsync(2000);
+      vi.useRealTimers();
+
+      expect(mockRecordUsage).toHaveBeenCalledTimes(3); // initial + 2 retries
+      expect(mockCaptureException).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          tags: { side_effect: "recordUsage" },
+        })
+      );
     });
   });
 

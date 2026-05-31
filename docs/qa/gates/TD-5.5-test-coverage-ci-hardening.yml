@@ -1,0 +1,59 @@
+schema: 1
+story: 'TD-5.5'
+gate: PASS
+status_reason: 'All 4 blocks (MNT-001, UX-11, SYS-9, SYS-12) verified — 447/447 tests green, build + lint clean, chat client contract provably unchanged, SSR-safe useSyncExternalStore, retry sound with no PII in Sentry alerts, and component tests assert real behavior.'
+reviewer: 'Quinn'
+updated: '2026-05-31T13:05:00Z'
+
+evidence:
+  tests: '447 passed / 447 (40 files) — vitest --maxWorkers=2. Baseline 358 → +89 (+19 MNT-001 equivalence, +35 UX-11/chat-interface hooks+helpers+characterization, +27 SYS-9 debate+drawer, +8 SYS-12 retry+route).'
+  build: 'PASS (exit 0) — no SSR/hydration break despite MNT-001 touching SSR-sensitive hooks.'
+  lint: 'exit 0 — 0 errors, 9 pre-existing warnings (none in TD-5.5 files). All removed eslint-disables left no issues; kept disables justified per Dev Agent Record.'
+
+review_findings:
+  chat_contract_unchanged:
+    verdict: CONFIRMED
+    evidence: >
+      route.ts returns result.toTextStreamResponse({ headers }) unchanged; client reads
+      response.body.getReader() + TextDecoder loop identically. Headers X-Conversation-Id
+      (always) + X-Token-Usage-Warning (conditional, "approaching-limit") both emitted and
+      read. Error branches 400/401/404/429/500 preserved with same i18n messages. 8
+      characterization tests (written BEFORE extraction) pass UNCHANGED after — proof of
+      zero behavior change.
+  sys12_non_blocking:
+    verdict: CONFIRMED
+    evidence: >
+      cleanupExpiredLimits, recordUsage, extractMemories→saveMemories all wrapped in
+      `void runBackground(...)` — not awaited. Response returns before background completes.
+      runBackground resolves undefined on both success and failure (never rejects).
+  sys12_no_pii:
+    verdict: CONFIRMED
+    evidence: >
+      alertSideEffectFailure → Sentry.captureException with tags.side_effect + extra context
+      limited to conversationId/mindId/model/attempts. No message content, no token counts,
+      no user PII. Route integration test asserts tags.side_effect: "recordUsage" on exhaustion.
+  mnt001_ssr_safe:
+    verdict: CONFIRMED
+    evidence: >
+      use-online-status.ts useSyncExternalStore has stable getServerSnapshot() returning true
+      (no hydration mismatch — matches prior useState(false) no-flash behavior). 3 cases
+      refactored correctly (navigator.onLine ×2 → useSyncExternalStore; localStorage prefs →
+      lazy useState initializer). 2 cases kept-as-effect with accurate justifications
+      (IndexedDB async fetch + aria-live DOM announce — useSyncExternalStore would be wrong).
+      19 equivalence tests assert real behavior (online/offline events, SSR renderToString).
+  sys9_tests_meaningful:
+    verdict: CONFIRMED
+    evidence: >
+      Not smoke tests. chat-interface: progressive streaming render, header-driven token banner
+      + dismiss, banner-absent case, sendMessage fallback, inline error. debate-interface:
+      turn/round math derived from currentTurn, maxRounds clamping, totalTurns = participants×rounds,
+      current-mind wrap-around via aria-label, active/paused/completed → control visibility,
+      empty-participants no-crash. conversation-drawer: open/close, select→router.push, empty-state,
+      title fallback, active highlight, mindId URL encoding.
+
+scope_notes:
+  - 'UX-11 deliberately skipped 2 extractions (markdownComponents map ~120 LOC, sendPrompt/streaming flow) for safety on the live Gemini network path — characterized by tests, not refactored. Acceptable: chat-message/chat-interface remain >300 LOC (DoD LOC target partial), safety prioritized over LOC metric.'
+  - 'SYS-9 covers the 3 highest-risk components (chat-interface, debate-interface, conversation-drawer) as scoped — partial coverage of the 56 components is by design.'
+
+top_issues: []
+waiver: { active: false }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useOfflineStatus } from "@/hooks/use-online-status";
 import {
   cacheConversation,
   getCachedConversationsByMind,
@@ -17,40 +18,24 @@ import {
  * - Exposes `isOffline` state for conditional rendering.
  */
 export function useOfflineConversations(mindId: string) {
-  const [isOffline, setIsOffline] = useState(false);
+  // Connectivity is an external browser store — read via useSyncExternalStore
+  // (MNT-001 / TD-5.5). Replaces the prior setState-in-effect sync of
+  // navigator.onLine and is SSR-safe (server snapshot = online).
+  const isOffline = useOfflineStatus();
   const [cachedConversations, setCachedConversations] = useState<
     CachedConversation[]
   >([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Track online/offline state
-  useEffect(() => {
-    // Legitimate external-system sync: navigator.onLine is SSR-unsafe, so the
-    // real connectivity value must be read post-mount. Not derived render state.
-    // lint-followup (TD-2.1): candidate for useSyncExternalStore.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing initial value from navigator.onLine (external browser API, SSR-unsafe)
-    setIsOffline(!navigator.onLine);
-
-    const handleOffline = () => setIsOffline(true);
-    const handleOnline = () => setIsOffline(false);
-
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
-
-    return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-    };
-  }, []);
-
   // Load cached conversations when offline
   useEffect(() => {
     if (!isOffline || !mindId) return;
 
-    // Legitimate async data-fetch effect: kicks off an IndexedDB read (external
-    // system) and tracks loading state. setState here gates a pending request,
-    // it is not derivable during render. lint-followup (TD-2.1).
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for async IndexedDB fetch (external system)
+    // Genuine async data-fetch effect (NOT an external store — useSyncExternalStore
+    // would be the wrong tool here). Kicks off an IndexedDB read and gates a
+    // pending request via the loading flag; the result is not derivable during
+    // render. The setState here is the loading flag for an async fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for async IndexedDB fetch (external system), not derivable during render
     setIsLoading(true);
     getCachedConversationsByMind(mindId)
       .then(setCachedConversations)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { sendMessage } from "@/app/actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +12,9 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { t } from "@/lib/i18n";
 import { classifyError, type AppError } from "@/lib/errors";
 import { useVoiceContext } from "@/components/chat/chat-voice-wrapper";
+import { useChatScroll } from "@/hooks/use-chat-scroll";
+import { useTokenWarning } from "@/hooks/use-token-warning";
+import { useChatTTS } from "@/hooks/use-chat-tts";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -82,11 +85,19 @@ export default function ChatInterface({
     initialConversationId
   );
   const [streamingText, setStreamingText] = useState<string | null>(null);
-  const [showScrollButton, setShowScrollButton] = useState(false);
-  const [tokenWarning, setTokenWarning] = useState(false);
-  const [speakingMessageIdx, setSpeakingMessageIdx] = useState<number | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
+
+  // Cohesive chat concerns extracted into dedicated hooks (UX-11).
+  const { messagesEndRef, showScrollButton, scrollToBottom } = useChatScroll([
+    messages,
+    streamingText,
+  ]);
+  const { tokenWarning, checkResponse, dismiss: dismissTokenWarning } =
+    useTokenWarning();
+  const { speakingMessageIdx, setSpeakingMessageIdx } = useChatTTS(
+    voice,
+    messages,
+    isLoading
+  );
 
   // Register transcript callback with shared voice state
   useEffect(() => {
@@ -98,73 +109,6 @@ export default function ChatInterface({
       voice.setOnTranscript(null);
     };
   }, [voice]);
-
-  // Track last message count for auto-play TTS
-  const prevMessageCountRef = useRef(messages.length);
-  useEffect(() => {
-    if (
-      voice?.enabled &&
-      voice.autoPlay &&
-      voice.ttsSupported &&
-      messages.length > prevMessageCountRef.current
-    ) {
-      const lastMsg = messages[messages.length - 1];
-      if (lastMsg && lastMsg.role === "model" && !isLoading) {
-        voice.speakText(lastMsg.text);
-        setSpeakingMessageIdx(messages.length - 1);
-      }
-    }
-    prevMessageCountRef.current = messages.length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, isLoading]);
-
-  // Clear speaking index when TTS stops
-  useEffect(() => {
-    if (voice && !voice.isSpeaking) {
-      setSpeakingMessageIdx(null);
-    }
-  }, [voice?.isSpeaking, voice]);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
-  }, []);
-
-  // Auto-scroll when new messages arrive
-  useEffect(() => {
-    // Only auto-scroll if user is near the bottom
-    const viewport = scrollViewportRef.current;
-    if (viewport) {
-      const { scrollTop, scrollHeight, clientHeight } = viewport;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      if (distanceFromBottom < 200) {
-        scrollToBottom();
-      }
-    } else {
-      scrollToBottom();
-    }
-  }, [messages, streamingText, scrollToBottom]);
-
-  // Scroll detection for "scroll to bottom" button
-  const handleScroll = useCallback(() => {
-    const viewport = scrollViewportRef.current;
-    if (!viewport) return;
-    const { scrollTop, scrollHeight, clientHeight } = viewport;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    setShowScrollButton(distanceFromBottom > 200);
-  }, []);
-
-  // Attach scroll listener to the ScrollArea viewport
-  useEffect(() => {
-    // The ScrollArea viewport is the element with data-slot="scroll-area-viewport"
-    const scrollAreaEl = document.querySelector(
-      '[data-slot="scroll-area-viewport"]'
-    ) as HTMLDivElement | null;
-    if (scrollAreaEl) {
-      scrollViewportRef.current = scrollAreaEl;
-      scrollAreaEl.addEventListener("scroll", handleScroll);
-      return () => scrollAreaEl.removeEventListener("scroll", handleScroll);
-    }
-  }, [handleScroll]);
 
   /**
    * Handle selecting a suggested prompt from the empty state.
@@ -241,10 +185,7 @@ export default function ChatInterface({
       }
 
       // Check token usage warning header
-      const usageWarning = response.headers.get("X-Token-Usage-Warning");
-      if (usageWarning === "approaching-limit") {
-        setTokenWarning(true);
-      }
+      checkResponse(response);
 
       // Read streaming response
       const reader = response.body?.getReader();
@@ -376,7 +317,7 @@ export default function ChatInterface({
           <div className="flex items-center justify-between gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-xs">
             <span>Voce usou mais de 80% do seu limite diario de tokens.</span>
             <button
-              onClick={() => setTokenWarning(false)}
+              onClick={dismissTokenWarning}
               className="text-amber-400 hover:text-amber-200 shrink-0"
               aria-label="Fechar aviso"
             >
