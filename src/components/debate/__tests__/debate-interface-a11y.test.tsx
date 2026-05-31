@@ -37,8 +37,8 @@ const defaultProps = {
   debateId: "debate-1",
   topic: "O futuro da IA",
   participants: [
-    { mindSlug: "socrates", mindName: "Socrates" },
-    { mindSlug: "aristoteles", mindName: "Aristoteles" },
+    { mindId: "1", mindSlug: "socrates", mindName: "Socrates", turnOrder: 0 },
+    { mindId: "2", mindSlug: "aristoteles", mindName: "Aristoteles", turnOrder: 1 },
   ],
   initialStatus: "active" as const,
   initialMessages: [],
