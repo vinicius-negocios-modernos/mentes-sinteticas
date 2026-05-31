@@ -30,9 +30,13 @@ Resolver os **49 débitos técnicos** mapeados no assessment APPROVED, agrupados
 | **W2** | Infra de migração + smoke + alerting | SYS-10, SYS-11, SYS-16 | ~15–20h | TD-2.1 |
 | **W3** | Hardening de schema (Tema C, via runner) | DB-5, DB-6, DB-18, DB-2, DB-15, DB-17, DB-9, DB-11, DB-10, DB-7, DB-12 | ~13–15h | TD-3.1 |
 | **W4** | Pipeline Gemini auto-cura (E) + contrato app-only (D) | SYS-1, SYS-7, DB-8, DB-1, SYS-14(boundary), DB-3 (fechamento) | ~12–15h | TD-4.1 |
-| **W5** | Cleanup (A) + design system (F) + config/i18n (G) + testes (SYS-9) | DB-14, DB-16, UX-6, UX-7, UX-8, UX-12, UX-2, UX-3, UX-9, UX-10, UX-14, UX-16, UX-11, SYS-9, SYS-5, SYS-6, SYS-13, UX-5, SYS-8, SYS-12, UX-13 | ~78–116h | TD-5.1 |
+| **W5** | ~~TD-5.1 umbrella (superseded — ver sub-stories)~~ | — | — | [TD-5.1 superseded](story-TD-5.1-cleanup-design-tests.md) |
+| **W5-A** | Cleanup pós-migração restante (Tema A) | DB-14, DB-16, UX-6, UX-7, UX-8, UX-12 | ~4.25–6.25h | TD-5.2 |
+| **W5-F** | Design system enforcement (Tema F) | UX-2, UX-3, UX-9, UX-10, UX-14, UX-16, UX-13 | ~52.5–73h | TD-5.3 |
+| **W5-G** | Config & i18n hardening (Tema G + SYS-8) | SYS-5, SYS-6, SYS-13, UX-5, SYS-8 | ~23–35h | TD-5.4 |
+| **W5-B** | Test coverage & CI hardening (Tema B + SYS-12) | SYS-9, UX-11, SYS-12 | ~28–36h | TD-5.5 |
 
-**Cobertura:** 49/49 débitos mapeados. Standalone (SYS-8, SYS-12, UX-13) absorvidos oportunisticamente na W5.
+**Cobertura:** 49/49 débitos mapeados. Standalone (SYS-8 → TD-5.4, SYS-12 → TD-5.5, UX-13 → TD-5.3) absorvidos nas sub-stories por afinidade temática.
 
 ---
 
@@ -90,8 +94,13 @@ TD-0 (W0, sem deps)
 | [TD-2.1](story-TD-2.1-migration-infra.md) | Infra de migração: runner + smoke + alerting | P1 | ~15–20h | 3 |
 | [TD-3.1](story-TD-3.1-schema-hardening.md) | Hardening de schema (Tema C) — **destrava cache Gemini** | **P0** | ~13–15h | 11 |
 | [TD-4.1](story-TD-4.1-gemini-resilience-app-security.md) | Resiliência Gemini (auto-cura) + contrato de segurança app-only | P1 | ~12–15h | 6 |
-| [TD-5.1](story-TD-5.1-cleanup-design-tests.md) | Cleanup, design system, config/i18n & testes de componente | P2 | ~78–116h | 21 |
+| ~~[TD-5.1](story-TD-5.1-cleanup-design-tests.md)~~ | ~~Cleanup, design system, config/i18n & testes~~ (SUPERSEDED) | — | — | 21 (ver sub-stories) |
+| [TD-5.2](story-TD-5.2-post-migration-cleanup.md) | Cleanup pós-migração restante (Tema A) | P3 | ~4.25–6.25h | 6 |
+| [TD-5.3](story-TD-5.3-design-system-enforcement.md) | Design system enforcement (Tema F + UX-13) | P2 | ~52.5–73h | 7 |
+| [TD-5.4](story-TD-5.4-config-i18n-hardening.md) | Config & i18n hardening (Tema G + SYS-8) | P3 | ~23–35h | 5 |
+| [TD-5.5](story-TD-5.5-test-coverage-ci-hardening.md) | Test coverage & CI hardening (Tema B + SYS-12) | P2 | ~28–36h | 3 |
 
-**Total: 6 stories · 49 débitos · ~135–165h.**
+**Total: 9 stories ativas (TD-5.1 superseded) · 49 débitos · ~135–165h** (horas W5 conservadas: 4.25+52.5+23+28 ≈ 107.75h min, 6.25+73+35+36 ≈ 150.25h max — dentro do range original de 78–116h para a W5 mais os standalones).
 
 > **P0 críticos marcados:** TD-1.1 carrega os CVEs HIGH (segurança ativa). TD-3.1 contém DB-5 (🔴 Critical já manifestado em produção — restauração do cache Gemini).
+> **W5 paralelismo:** TD-5.2, TD-5.3, TD-5.4 são independentes entre si. TD-5.5 depende implicitamente de TD-5.3 para UX-11 (refactor habilita testabilidade).

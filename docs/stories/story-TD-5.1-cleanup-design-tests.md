@@ -1,10 +1,23 @@
 # Story TD-5.1 — Cleanup, design system, config/i18n & testes de componente
 
-**Status:** Ready
+**Status:** SUPERSEDED — split em TD-5.2, TD-5.3, TD-5.4, TD-5.5 (2026-05-31)
 **Epic:** [Resolução de Débitos Técnicos](epic-technical-debt.md) · **Wave:** W5
 **Prioridade:** P2 · **Estimativa:** ~78–116h (paralelizável, sem urgência de prod)
 
-> 📦 **Story guarda-chuva da Wave 5.** Agrupa Temas A (cleanup) + F (design system) + G (config/i18n) + SYS-9 (testes) + standalone (SYS-8/SYS-12/UX-13). Maior esforço do épico, sem urgência de produção — paralelizável. **Recomenda-se quebrar em sub-stories no início da execução** (uma por tema) se a equipe quiser paralelizar com owners distintos.
+> **ÍNDICE DA WAVE 5.** Esta story guarda-chuva foi superseded e não deve ser implementada diretamente. Ela foi dividida em 4 sub-stories independentes e paralelizáveis. Ver mapeamento de débitos abaixo.
+>
+> | Sub-story | Tema | Débitos | Horas | Prioridade |
+> |-----------|------|---------|-------|-----------|
+> | [TD-5.2](story-TD-5.2-post-migration-cleanup.md) | Cleanup pós-migração restante (Tema A) | DB-14, DB-16, UX-6, UX-7, UX-8, UX-12 | ~4.25–6.25h | P3 |
+> | [TD-5.3](story-TD-5.3-design-system-enforcement.md) | Design system enforcement (Tema F) | UX-2, UX-3, UX-9, UX-10, UX-14, UX-16, UX-13 | ~52.5–73h | P2 |
+> | [TD-5.4](story-TD-5.4-config-i18n-hardening.md) | Config & i18n hardening (Tema G + SYS-8) | SYS-5, SYS-6, SYS-13, UX-5, SYS-8 | ~23–35h | P3 |
+> | [TD-5.5](story-TD-5.5-test-coverage-ci-hardening.md) | Test coverage & CI hardening (Tema B + SYS-12) | SYS-9, UX-11, SYS-12 | ~28–36h | P2 |
+>
+> **Histórico preservado abaixo para referência.** Não implementar esta story diretamente.
+
+---
+
+> 📦 **Story guarda-chuva da Wave 5 (original).** Agrupa Temas A (cleanup) + F (design system) + G (config/i18n) + SYS-9 (testes) + standalone (SYS-8/SYS-12/UX-13). Maior esforço do épico, sem urgência de produção — paralelizável. Split executado em 2026-05-31 por @sm conforme recomendação @po.
 
 ## Story
 
@@ -91,3 +104,4 @@
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2026-05-30 | 1.1.0 | Validated GO (8/10) — Status: Draft → Ready. Observação @po (não-bloqueante): umbrella de 78–116h/21 débitos — recomenda quebrar em sub-stories por tema (A/F/G/B) antes do dev, conforme já sinalizado na própria story. | @po |
+| 2026-05-31 | 2.0.0 | SUPERSEDED — split em TD-5.2 (Tema A, 6 débitos), TD-5.3 (Tema F, 7 débitos), TD-5.4 (Tema G + SYS-8, 5 débitos), TD-5.5 (Tema B + SYS-12, 3 débitos). Total: 21 débitos mapeados sem orphans. | @sm |
