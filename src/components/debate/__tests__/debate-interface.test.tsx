@@ -20,7 +20,8 @@ import DebateInterface from "../debate-interface";
 import type { DebateParticipantInfo, DebateStatus } from "@/lib/types";
 
 beforeAll(() => {
-  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView =
+    vi.fn() as unknown as typeof Element.prototype.scrollIntoView;
 });
 
 vi.mock("next/navigation", () => ({

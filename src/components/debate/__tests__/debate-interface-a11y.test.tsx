@@ -5,7 +5,8 @@ import DebateInterface from "../debate-interface";
 
 // Mock scrollIntoView (not available in jsdom)
 beforeAll(() => {
-  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView =
+    vi.fn() as unknown as typeof Element.prototype.scrollIntoView;
 });
 
 // Mock next/navigation

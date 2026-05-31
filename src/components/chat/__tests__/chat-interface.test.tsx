@@ -118,7 +118,8 @@ describe("ChatInterface — characterization (SYS-9 / UX-11)", () => {
     toastSuccess.mockClear();
     vi.stubGlobal("fetch", vi.fn());
     // jsdom doesn't implement scrollIntoView
-    Element.prototype.scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView =
+      vi.fn() as unknown as typeof Element.prototype.scrollIntoView;
   });
 
   afterEach(() => {

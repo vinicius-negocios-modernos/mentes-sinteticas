@@ -6,11 +6,19 @@
  * (never yank a user reading history), and toggle the floating "scroll to
  * bottom" button based on distance from the bottom of the viewport.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useChatScroll, SCROLL_BOTTOM_THRESHOLD } from "../use-chat-scroll";
 
-let scrollIntoView: ReturnType<typeof vi.fn>;
+let scrollIntoView: Mock;
 let viewport: HTMLDivElement;
 
 /**
@@ -42,7 +50,8 @@ function mountViewport(geometry: {
 describe("useChatScroll", () => {
   beforeEach(() => {
     scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+    Element.prototype.scrollIntoView =
+      scrollIntoView as unknown as typeof Element.prototype.scrollIntoView;
   });
 
   afterEach(() => {
