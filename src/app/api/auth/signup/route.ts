@@ -3,17 +3,20 @@ import { hash } from "bcryptjs";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { SignupSchema } from "@/lib/validations/auth";
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
 
-    if (!email || !password || password.length < 6) {
-      return NextResponse.json(
-        { error: "Email e senha (min 6 caracteres) são obrigatórios" },
-        { status: 400 }
-      );
+    const validation = SignupSchema.safeParse(body);
+
+    if (!validation.success) {
+      const errors = validation.error.issues.map((i) => i.message).join(" ");
+      return NextResponse.json({ error: errors }, { status: 400 });
     }
+
+    const { email, password } = validation.data;
 
     const [existing] = await db
       .select({ id: users.id })
