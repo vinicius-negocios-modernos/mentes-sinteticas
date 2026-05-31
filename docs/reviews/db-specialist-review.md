@@ -1,716 +1,170 @@
 # Database Specialist Review
 
-## Projeto: Mentes Sinteticas
+**Projeto:** Mentes Sintéticas | **Revisor:** Dara (@data-engineer) | **Fase:** 5 (Brownfield Discovery) | **Data:** 2026-05-30
+**Insumo:** `docs/prd/technical-debt-DRAFT.md` (Seção 2, Temas C/D/E/G, Seção 6) · `docs/database/DB-AUDIT.md` · `docs/database/SCHEMA.md`
+**Verificação:** schema real em `src/db/schema/*.ts`, migrations `drizzle/0000..0002`, scripts `scripts/*.sql`, e serviços `src/lib/services/*` + `src/lib/ai/knowledge.ts`.
+**Postura:** review-only. Nenhuma migração/DDL aplicada. Estimativas sob a ótica de **prod viva (VPS Docker Swarm, migrations manuais via SSH)**.
 
-**Phase:** Brownfield Discovery - Phase 5 (Database Specialist Review)
-**Author:** @data-engineer (Dara)
-**Date:** 2026-03-06
-**Status:** Complete
-**Input Documents:**
-- `docs/prd/technical-debt-DRAFT.md` (Phase 4 - @architect)
-- `docs/architecture/system-architecture.md` (Phase 1 - @architect)
-- `src/app/actions.ts` (Server Actions)
-- `src/lib/gemini.ts` (Gemini integration)
-- `data/minds_manifest.json` (Current data structure)
+> **Escala:** 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low. Esforço em horas-dev (inclui escrita da migration, dry-run, aplicação manual em prod, verificação).
 
 ---
 
-## 1. Debitos Validados
+## 1. Débitos Validados
 
-Revisao dos debitos identificados pelo @architect que envolvem dados, persistencia e estado.
+| ID | Débito | Severidade (confirma/ajusta) | Horas est. | Complexidade | Prioridade | Notas |
+|----|--------|------------------------------|-----------|--------------|-----------|-------|
+| **DB-4** | `fix-m1-local-path.sql` escreve `updated_at` em `knowledge_documents` (coluna inexistente) | 🔴→🟠 **AJUSTA p/ High** | 0.25h | simples | **P1** | **CONFIRMADO** que a coluna não existe (migration 0000 + schema TS: `knowledge_documents` só tem `created_at`). PORÉM o script é one-shot já superado pelo `update-file-uris-2026-03-16.sql` (LIKE/NFD-safe). O `BEGIN/COMMIT` garante que, se rodou e abortou, **nada foi commitado** — sem corrupção. Rebaixo de Critical: é um script morto/quebrado, não um caminho de runtime ativo. Fix = deletar o `, updated_at = NOW()` ou arquivar o script. |
+| **DB-5** | `file_uri_cache` sem UNIQUE em `knowledge_document_id`, mas scripts usam `ON CONFLICT (knowledge_document_id)` | 🔴 **CONFIRMA Critical** | 1.5h | médio | **P1** | **CONFIRMADO**: migration 0000 cria `file_uri_cache` sem UNIQUE nem índice em `knowledge_document_id`; `fix-m1-local-path.sql` usa `ON CONFLICT (knowledge_document_id) DO UPDATE`. Sem o índice único, o `ON CONFLICT` **lança erro** (`there is no unique or exclusion constraint matching the ON CONFLICT specification`) e aborta a transação. É a raiz real do cache-miss não-recuperável (ver §3). Requer dedupe ANTES do UNIQUE (§5). |
+| **DB-2** | `user_id` em 5 tabelas sem FK p/ `users` | 🔴→🟠 **AJUSTA p/ High** | 4h | médio | **P1** | **CONFIRMADO**: `conversations.user_id`, `debates.user_id`, `mind_memories.user_id`, `rate_limits.user_id`, `token_usage.user_id` — todos `uuid NOT NULL` SEM `references()`. Ajuste de severidade: é integridade ausente, não data-loss/runtime-failure ativo (app já filtra por `userId`). Continua P1 dentro do track DB por ser pré-requisito do Tema D. **ON DELETE não deve ser CASCADE cego** (ver §3 e §5). |
+| **DB-3** | `local_path` em NFD (macOS) → mismatch em JOIN/`=` | 🟠 **CONFIRMA High** | 3h | médio | **P1** | **CONFIRMADO**: `update-file-uris.sql` faz `JOIN ... ON kd.local_path = v.local_path` (igualdade exata) — falha sob NFD. Já contornado no `update-file-uris-2026-03-16.sql` via `LIKE '%pattern%'`. Mas é gatilho do **write-side**, NÃO do read-side (ver §3 — distinção crítica). Fix permanente = normalizar p/ NFC no ingest + backfill. |
+| **DB-6** | Índices ausentes em FK/filtros quentes | 🟠 **CONFIRMA High (escopo corrigido)** | 1.5h | simples | **P2** | **PARCIALMENTE confirmado — escopo da Fase 2 desatualizado.** `mind_memories`, `token_usage`, `rate_limits` JÁ têm índices (migration 0002). Os que **realmente faltam**: `messages.conversation_id` (read mais quente — confirmado em `conversations.ts`/fetch de mensagens), `conversations.user_id`, `conversations.mind_id`, `debates.user_id`, `knowledge_documents.mind_id`, `file_uri_cache.knowledge_document_id`. Postgres **não** auto-indexa colunas de FK — mesmo as FK'd precisam de índice explícito. |
+| **DB-7** | `conversations.share_token` sem índice e sem UNIQUE | 🟠→🟡 **AJUSTA p/ Medium** | 0.5h | simples | **P2** | **CONFIRMADO o índice ausente** (`sharing.ts:147` faz `WHERE shareToken = token` → seq-scan em cada page-load de share). **Risco de colisão DESCARTADO**: `generateShareToken()` usa `crypto.randomBytes(32)` = 256 bits → colisão é estatisticamente impossível. Logo o problema é só **performance** (índice), não correção. Adicionar índice (e UNIQUE como belt-and-suspenders, custo ~0). Rebaixo p/ Medium: share não é caminho quente nem crítico de prod. |
+| **DB-13** | `rate_limits` sem UNIQUE em (user_id, action, window_start) — race duplica janela | 🟠→🟢 **REJEITA premissa / AJUSTA p/ Low** | 0.25h (só doc) | simples | **P4** | **PREMISSA INCORRETA.** `incrementRateLimit()` (`rate-limiter.ts:128`) faz **INSERT puro, uma linha por request** — design append-only intencional; `checkRateLimit()` faz `SUM(request_count)` sobre as linhas da janela. Múltiplas linhas por janela é o comportamento **projetado**, não um bug de race. Um UNIQUE em (user_id, action, window_start) **QUEBRARIA** o design (segundo request da janela falharia no INSERT). Não há race de contagem — o SUM é correto sob concorrência. O custo real é **crescimento ilimitado** = é o **DB-12**, não um débito separado. Recomendo **rejeitar DB-13 como débito de integridade** e fundir no DB-12. |
+| **DB-1** | Sem RLS/authz no DB pós-Supabase | 🟠 **CONFIRMA High (analysis-only)** | 3h (doc/ADR) | médio | **P2** | **CONFIRMADO** como gap de contrato, não bug. Sem Supabase/RLS, authz vive 100% em `src/lib/services/*`. Defensável SE (a) app é único gatekeeper e (b) DB garante integridade referencial — hoje (b) não existe (DB-2). Entregável = ADR documentando o contrato "app-is-the-only-gatekeeper" + dependência de DB-2 e SYS-14. Sem DDL nesta fase. |
+| **DB-9** | Enums (`messages.role`, `mind_memories.memory_type`, `debates.status`) só na ORM, sem CHECK/pg enum | 🟡 **CONFIRMA Medium** | 1.5h | simples | **P3** | **CONFIRMADO**: schema TS usa `text({enum:[...]})`/`$type<>` (validação só na ORM); migrations criam `text` puro sem CHECK. DB aceita qualquer string via SQL raw/script — exatamente o vetor que mordeu em DB-4/DB-8. Preferir `CHECK (... IN (...))` a `pg enum` (enums Postgres são caros de alterar). |
+| **DB-10** | Sem auto-update de `updated_at` (sem triggers) | 🟡 **CONFIRMA Medium** | 1.5h | simples | **P3** | **CONFIRMADO**: nenhuma migration cria trigger; `updated_at` é app-mantido (Drizzle `.set({updatedAt})`). Writes raw/script pulam. Fix = trigger `BEFORE UPDATE` genérico nas 7 tabelas com `updated_at`. Liga ao DB-8 (scripts ad-hoc não atualizam). |
+| **DB-12** | `rate_limits`/`token_usage` crescem ilimitadamente | 🟡 **CONFIRMA Medium (absorve DB-13)** | 2.5h | médio | **P3** | **CONFIRMADO**: existe `cleanupExpiredLimits()` (`rate-limiter.ts:140`, cutoff 24h) MAS é "lazy/best-effort" e **não há chamada agendada** verificável (fire-and-forget, ver SYS-12). `token_usage` não tem retenção nenhuma (é dado de billing — provavelmente deve ser **arquivado**, não deletado). Fix = job de retenção agendado + política distinta por tabela. Absorve o crescimento que DB-13 erroneamente atribuiu a race. |
+| **DB-8** | Scripts `*.sql` ad-hoc mutam prod fora das migrations | 🟡 **CONFIRMA Medium** | 4h | médio | **P3** | **CONFIRMADO**: 3 scripts `*.sql` hand-edited (`fix-m1-local-path`, `update-file-uris`, `update-file-uris-2026-03-16`) rodam direto em prod via psql. DB-4 e DB-5 são sintomas materiais. Fix = mover refresh de URI p/ script Drizzle parametrizado/versionado (Tema E). **Bloqueado por SYS-10** (sem runner, não há "lugar certo" pra colocá-los). |
+| **DB-11** | `token_usage.total_tokens` denormalizado sem CHECK | 🟢 **CONFIRMA Low** | 0.5h | simples | **P4** | **CONFIRMADO**: `total_tokens` é coluna separada de `input+output` sem `CHECK (total_tokens = input_tokens + output_tokens)`. Pode driftar via insert raw. Quick-win agrupável com DB-9 (mesmo PR de CHECKs). |
+| **DB-14** | `knowledge_documents` tem `local_path` E `storage_path` (pós-Supabase) | 🟢 **CONFIRMA Low — drop APROVÁVEL** | 1h | simples | **P4** | **CONFIRMADO + resposta à Q5 do architect:** `storage_path` é **ESCRITO** só por `scripts/seed-db.ts:118-129` (derivado de localPath) e tem **ZERO reads em `src/`** (grep confirma: nenhum `.storagePath`/`storage_path` fora de schema/seed). Coluna morta da era Supabase. **Drop é seguro** após (a) remover a escrita no seed e (b) confirmar zero reads — feito. Requer aprovação explícita de drop (governança). |
 
-| ID | Debito | Severidade Original | Severidade Ajustada | Horas | Prioridade | Notas |
-|----|--------|---------------------|---------------------|-------|------------|-------|
-| SYS-010 | File URIs expiram em 48h sem mecanismo de renovacao | ALTO | **CRITICO** | 6-8 | P0 | Ajustado para CRITICO. O `last_updated` no manifest mostra `2025-12-31` -- esses URIs ja expiraram ha meses. O sistema inteiro esta quebrado silenciosamente AGORA. Nenhuma conversa funciona ate resolver isso. |
-| SYS-012 | Context window bloat -- 21 file URIs re-enviados a cada mensagem | ALTO | ALTO | 8-12 | P1 | Confirmado. Analisando `gemini.ts:91-106`, o `chatHistory` prepend acontece em TODA chamada. Com 21 arquivos + historico crescente, o custo de tokens escala linearmente. Solucao: Gemini Cached Content API. |
-| SYS-013 | Chat session recriado do zero a cada `sendMessage` | ALTO | ALTO | 6-8 | P1 | Confirmado. `createMindChat()` e chamado em `actions.ts:12` toda vez. Zero reutilizacao de sessao. Precisa de server-side session store. |
-| SYS-014 | `readFileSync` em funcoes async | MEDIO | MEDIO | 1-2 | P2 | Confirmado. `gemini.ts:33,39` usa `fs.readFileSync`. Migrar para DB elimina este debito automaticamente. |
-| SYS-016 | Manifest re-lido do disco a cada request | MEDIO | MEDIO | 2-3 | P2 | Confirmado. Migrar manifest para DB com caching em memoria resolve. |
-| UX-004 | Historico de chat nao persistido | ALTO | **CRITICO** | 6-8 | P0 | Ajustado para CRITICO. Sem persistencia, o produto nao tem proposta de valor real. Cada refresh destroi toda a interacao. Para um produto "legendario", historico e fundamento. |
-| CROSS-002 | No auth + no persistence = no user identity | CRITICO | CRITICO | 16-24 | P0 | Confirmado. A ausencia de DB e o bloqueio fundamental. Tudo depende disso. |
-| CROSS-003 | Arquitetura stateless impede features core | ALTO | ALTO | 12-16 | P1 | Confirmado. O DB e o alicerce para resolver este debito. |
-| CROSS-006 | Knowledge base management gap | ALTO | ALTO | 8-12 | P1 | Confirmado. O manifest JSON e fragil, sem TTL tracking, sem admin UI. |
-
----
-
-## 2. Debitos Adicionados
-
-Debitos de dados/persistencia nao identificados no DRAFT.
-
-| ID | Debito | Severidade | Horas | Prioridade | Justificativa |
-|----|--------|-----------|-------|------------|---------------|
-| DB-001 | **Manifest JSON nao tem campo `expires_at` por arquivo.** O campo `last_updated` existe no nivel da mente, nao por arquivo. Impossivel saber qual URI expirou sem consultar a API do Gemini. | CRITICO | 2-3 | P0 | O Gemini File API retorna `expirationTime` no upload. O script `ingest_mind.ts` nao captura esse dado. Sem ele, qualquer logica de renovacao e cega. |
-| DB-002 | **Nenhuma estrategia de backup dos dados de conhecimento.** Os arquivos locais em `knowledge_base/` sao a unica copia. Se perdidos, a re-criacao da mente e impossivel (depende de conteudo original). | ALTO | 2-3 | P1 | Precisa de storage duravel (Supabase Storage, S3, ou similar) como backup dos originais. |
-| DB-003 | **Manifest JSON e single point of failure.** Um JSON corrompido (escrita parcial, conflito de merge) derruba todo o catalogo de mentes. Nao ha validacao de integridade. | ALTO | 1-2 | P1 | Schema validation (Zod) + migracao para DB resolve. |
-| DB-004 | **Sem tracking de token usage por conversa/usuario.** `gemini.ts` recebe `maxOutputTokens: 8192` mas nao registra quantos tokens foram usados. Impossivel calcular custo, detectar abuso, ou otimizar. | MEDIO | 3-4 | P2 | O response do Gemini retorna `usageMetadata`. Precisa capturar e persistir. |
-| DB-005 | **Sem controle de concorrencia no manifest.** Se dois processos (ex: ingestion + server) lerem/escreverem simultaneamente, ocorre race condition e perda de dados. | MEDIO | 1-2 | P2 | DB resolve com transacoes ACID. |
-| DB-006 | **`localPath` no manifest usa caminhos relativos com caracteres especiais.** Acentos, dois-pontos, aspas e travessoes nos nomes de arquivo. Quebrara em Windows e em algumas configuracoes de filesystem. | MEDIO | 1-2 | P2 | Normalizar nomes na migracao para DB. Usar slugs ou UUIDs como identificadores. |
+**Resumo da validação:** 14 débitos DB revisados → **8 confirmados** (DB-3, DB-5, DB-6, DB-8, DB-9, DB-10, DB-11, DB-14; DB-1/DB-12 confirmados c/ nota) · **5 ajustados** (DB-2 🔴→🟠, DB-4 🔴→🟠, DB-7 🟠→🟡, DB-12 absorve DB-13, DB-1 escopo) · **1 rejeitado na premissa** (DB-13 — vira Low/funde em DB-12).
 
 ---
 
-## 3. Recomendacao de Arquitetura de Dados
+## 2. Débitos Adicionados
 
-### 3.1 Tecnologia Recomendada: Supabase (PostgreSQL)
+Itens de camada de dados que o DRAFT não capturou, encontrados na re-checagem:
 
-**Concordo com a recomendacao do @architect na Secao 7.2 do DRAFT**, com as seguintes justificativas adicionais e refinamentos:
+| ID | Débito | Severidade | Horas | Notas |
+|----|--------|-----------|-------|-------|
+| **DB-15** | `debate_participants.mind_id` FK com `ON DELETE no action` (default), enquanto `debate_id` é CASCADE | 🟡 Medium | 0.5h | Migration 0002:71. Deletar um `mind` com participações deixa o DELETE **bloqueado** (no action = RESTRICT). Inconsistente com o resto do schema (minds→knowledge/conversations são CASCADE). Decisão consciente necessária: bloquear delete de mind ativo é provavelmente o correto, mas deve ser explícito/documentado. |
+| **DB-16** | `seed-db.ts` ainda popula `storage_path` (coluna morta DB-14) | 🟢 Low | 0.25h | Co-requisito de DB-14: o drop da coluna falha/regride se o seed continuar escrevendo. Remover linhas 118-129 ANTES do drop. |
+| **DB-17** | `messages.mind_slug` é `varchar` solto, sem FK p/ `minds.slug` nem índice | 🟢 Low | 0.5h | Adicionado na 0002 p/ debates. `minds.slug` é UNIQUE (indexável), mas `mind_slug` não referencia nada — slug órfão possível se um mind for renomeado. Baixo risco (debates only), mas é um `user_id`-sem-FK em miniatura. |
+| **DB-18** | Nenhum índice em `created_at` de `messages`/`conversations` p/ ordenação cronológica | 🟢 Low | 0.5h | Listas de conversa/mensagem ordenam por `created_at DESC`. Em baixo volume (1 mind, uso inicial) é irrelevante; agrupar com DB-6 se/quando o volume crescer. Flag, não urgência. |
 
-| Fator | Analise |
-|-------|---------|
-| **PostgreSQL** | Modelo relacional ideal para conversations/messages (queries complexas, JOINs, full-text search). JSONB para metadata flexivel. |
-| **Supabase Auth** | Elimina CROSS-002 (auth + persistence). Social login, magic link, sessoes gerenciadas. Zero infra adicional. |
-| **Supabase Realtime** | Habilita streaming de status (typing indicators, presenca online) sem WebSocket custom. Essencial para o feature "Multi-Mind Debates". |
-| **Supabase Storage** | Resolve DB-002 (backup de knowledge base). Upload de arquivos com CDN integrado. |
-| **Row Level Security (RLS)** | Seguranca no nivel do banco. Usuarios so acessam seus proprios dados. Elimina classe inteira de vulnerabilidades. |
-| **Edge Functions** | Cron jobs para renovacao de File URIs (SYS-010). Sem necessidade de infra separada. |
-| **Free Tier** | 500MB DB, 1GB Storage, 50K auth users. Mais que suficiente para MVP e early growth. |
-| **Migracao futura** | PostgreSQL standard. Se precisar migrar de Supabase, o schema funciona em qualquer Postgres managed (RDS, Cloud SQL, Neon). |
-
-**Alternativas avaliadas e descartadas:**
-
-| Tecnologia | Motivo de Rejeicao |
-|------------|-------------------|
-| **SQLite** | Sem auth built-in, sem realtime, sem RLS, nao escala para multi-usuario. Bom para prototipo local, insuficiente para a visao do projeto. |
-| **Firebase/Firestore** | NoSQL dificulta queries analiticas (mind popularity, conversation stats). Vendor lock-in mais forte. Sem SQL. |
-| **PlanetScale** | Excelente para MySQL, mas nao bundla auth/storage/realtime. Mais moving parts para gerenciar. |
-| **Prisma + Postgres standalone** | Prisma e excelente como ORM, mas Supabase ja fornece o Postgres + extras. Recomendo Prisma como ORM sobre Supabase Postgres se a equipe preferir type-safe queries sobre o Supabase client JS. |
-
-**ORM Recommendation:** **Drizzle ORM** sobre Supabase Postgres.
-
-| Fator | Drizzle | Prisma |
-|-------|---------|--------|
-| Bundle size | ~7KB | ~200KB+ |
-| Performance | SQL direto, zero overhead | Query engine intermediario |
-| Type safety | Excelente (schema-as-code) | Excelente (codegen) |
-| Migrations | Push-based ou SQL | Prisma migrate |
-| Learning curve | Baixa (SQL-like) | Media |
-| Supabase compat | Nativo | Requer connection pooler |
-
-Para um projeto Next.js que roda em serverless (Vercel), Drizzle e a escolha superior pela leveza e performance.
+**Total adicionado:** 4 débitos (0 🔴 · 0 🟠 · 1 🟡 · 3 🟢). Nenhum altera a foto de risco crítico.
 
 ---
 
-### 3.2 Schema Proposto
+## 3. Respostas ao Architect (CRITICAL)
 
-```sql
--- ============================================================
--- SCHEMA: Mentes Sinteticas
--- Engine: PostgreSQL (Supabase)
--- ORM: Drizzle (type definitions geradas a partir deste schema)
--- ============================================================
+### Q1 — DB-5 vs DB-3: qual é a causa-raiz REAL do cache-miss do Gemini File URI?
 
--- =====================
--- USERS (Supabase Auth)
--- =====================
--- Tabela `auth.users` e gerenciada pelo Supabase Auth.
--- Criamos uma tabela `profiles` para dados adicionais.
+**Resposta definitiva: são causas-raiz de DOIS estágios diferentes do pipeline, e a confusão da Fase 2 foi tratá-las como o mesmo bug. Para destravar o cache, DB-5 é o que precisa ser corrigido primeiro — DB-3 sozinho não recupera.**
 
-CREATE TABLE profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    display_name TEXT NOT NULL DEFAULT '',
-    avatar_url TEXT,
-    preferred_language TEXT NOT NULL DEFAULT 'pt-BR',
-    theme TEXT NOT NULL DEFAULT 'dark' CHECK (theme IN ('dark', 'light', 'system')),
-    default_mind_id UUID REFERENCES minds(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- =====================
--- MINDS (Catalogo de Pensadores)
--- =====================
-
-CREATE TABLE minds (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL UNIQUE,                          -- "Antonio Napole"
-    slug TEXT NOT NULL UNIQUE,                          -- "antonio-napole" (URL-safe)
-    description TEXT,                                   -- Bio curta para catalogo
-    avatar_url TEXT,                                    -- URL do avatar/foto
-    system_prompt TEXT NOT NULL,                         -- Prompt de persona completo
-    model_config JSONB NOT NULL DEFAULT '{              -- Config do modelo Gemini
-        "model": "gemini-2.0-flash",
-        "temperature": 0.7,
-        "topK": 40,
-        "topP": 0.95,
-        "maxOutputTokens": 8192
-    }'::jsonb,
-    status TEXT NOT NULL DEFAULT 'active'
-        CHECK (status IN ('active', 'inactive', 'ingesting', 'error')),
-    tags TEXT[] DEFAULT '{}',                           -- ["estrategista", "negocios"]
-    category TEXT,                                      -- "Estrategistas", "Filosofos", etc.
-    total_conversations INTEGER NOT NULL DEFAULT 0,     -- Counter cache
-    total_messages INTEGER NOT NULL DEFAULT 0,          -- Counter cache
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_minds_slug ON minds(slug);
-CREATE INDEX idx_minds_status ON minds(status);
-CREATE INDEX idx_minds_category ON minds(category);
-
--- =====================
--- MIND FILES (Knowledge Base URIs)
--- =====================
-
-CREATE TABLE mind_files (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    mind_id UUID NOT NULL REFERENCES minds(id) ON DELETE CASCADE,
-    file_name TEXT NOT NULL,                            -- "M1 - Historia de Vida e Formacao"
-    display_name TEXT NOT NULL,                         -- Nome legivel para admin UI
-    gemini_file_name TEXT,                              -- "files/z3o01p82t6qv" (Gemini API ref)
-    file_uri TEXT,                                      -- URI completa do Gemini File API
-    mime_type TEXT NOT NULL DEFAULT 'text/plain',
-    file_size_bytes BIGINT,                             -- Tamanho para metricas
-    storage_path TEXT,                                  -- Path no Supabase Storage (backup)
-    local_path TEXT,                                    -- Path original no filesystem
-    status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending', 'uploading', 'active', 'expired', 'error')),
-    uploaded_at TIMESTAMPTZ,                            -- Quando foi enviado ao Gemini
-    expires_at TIMESTAMPTZ,                             -- TTL do Gemini (48h apos upload)
-    last_refreshed_at TIMESTAMPTZ,                      -- Ultimo re-upload bem sucedido
-    refresh_count INTEGER NOT NULL DEFAULT 0,           -- Quantas vezes foi renovado
-    error_message TEXT,                                 -- Ultimo erro de upload/refresh
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_mind_files_mind_id ON mind_files(mind_id);
-CREATE INDEX idx_mind_files_status ON mind_files(status);
-CREATE INDEX idx_mind_files_expires_at ON mind_files(expires_at)
-    WHERE status = 'active';                            -- Partial index: so ativos
-
--- =====================
--- CONVERSATIONS
--- =====================
-
-CREATE TABLE conversations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    mind_id UUID NOT NULL REFERENCES minds(id) ON DELETE CASCADE,
-    title TEXT,                                         -- Auto-gerado do primeiro msg ou user-defined
-    summary TEXT,                                       -- Resumo para "Mind Memory" feature
-    status TEXT NOT NULL DEFAULT 'active'
-        CHECK (status IN ('active', 'archived', 'deleted')),
-    message_count INTEGER NOT NULL DEFAULT 0,           -- Counter cache
-    total_tokens_used INTEGER NOT NULL DEFAULT 0,       -- Soma de tokens da conversa
-    last_message_at TIMESTAMPTZ,
-    is_shared BOOLEAN NOT NULL DEFAULT FALSE,           -- Para feature "Conversation Sharing"
-    share_slug TEXT UNIQUE,                             -- Slug para URL publica
-    metadata JSONB DEFAULT '{}',                        -- Extensivel: model version, etc.
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_conversations_user_id ON conversations(user_id);
-CREATE INDEX idx_conversations_mind_id ON conversations(mind_id);
-CREATE INDEX idx_conversations_user_mind ON conversations(user_id, mind_id);
-CREATE INDEX idx_conversations_last_message ON conversations(last_message_at DESC);
-CREATE INDEX idx_conversations_share_slug ON conversations(share_slug)
-    WHERE share_slug IS NOT NULL;                       -- Partial index
-
--- =====================
--- MESSAGES
--- =====================
-
-CREATE TABLE messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('user', 'model', 'system')),
-    content TEXT NOT NULL,
-    tokens_input INTEGER,                               -- Tokens de input (do usageMetadata)
-    tokens_output INTEGER,                              -- Tokens de output
-    model_used TEXT,                                    -- "gemini-2.0-flash" (registra versao exata)
-    response_time_ms INTEGER,                           -- Latencia da resposta Gemini
-    metadata JSONB DEFAULT '{}',                        -- Extensivel: feedback, rating, etc.
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Sem updated_at: mensagens sao imutaveis (append-only log)
-CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
-CREATE INDEX idx_messages_created_at ON messages(conversation_id, created_at);
-
--- =====================
--- ANALYTICS (Eventos de Uso)
--- =====================
-
-CREATE TABLE analytics_events (
-    id BIGSERIAL PRIMARY KEY,                           -- BIGSERIAL para volume alto
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    event_type TEXT NOT NULL,                            -- 'conversation_start', 'message_sent',
-                                                        -- 'mind_selected', 'conversation_shared', etc.
-    mind_id UUID REFERENCES minds(id) ON DELETE SET NULL,
-    conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
-    properties JSONB DEFAULT '{}',                      -- Dados especificos do evento
-    session_id TEXT,                                    -- Para agrupar eventos por sessao
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Partitioned by time seria ideal em producao, mas para MVP:
-CREATE INDEX idx_analytics_event_type ON analytics_events(event_type);
-CREATE INDEX idx_analytics_user_id ON analytics_events(user_id);
-CREATE INDEX idx_analytics_mind_id ON analytics_events(mind_id);
-CREATE INDEX idx_analytics_created_at ON analytics_events(created_at DESC);
-
--- =====================
--- FILE REFRESH LOG (Auditoria de renovacao de URIs)
--- =====================
-
-CREATE TABLE file_refresh_log (
-    id BIGSERIAL PRIMARY KEY,
-    mind_file_id UUID NOT NULL REFERENCES mind_files(id) ON DELETE CASCADE,
-    old_uri TEXT,
-    new_uri TEXT,
-    status TEXT NOT NULL CHECK (status IN ('success', 'failure')),
-    error_message TEXT,
-    duration_ms INTEGER,
-    triggered_by TEXT NOT NULL DEFAULT 'cron'            -- 'cron', 'manual', 'on_demand'
-        CHECK (triggered_by IN ('cron', 'manual', 'on_demand')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_file_refresh_log_mind_file ON file_refresh_log(mind_file_id);
-
--- =====================
--- RLS POLICIES
--- =====================
-
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
-
--- Profiles: usuario so ve/edita o proprio perfil
-CREATE POLICY profiles_own ON profiles
-    FOR ALL USING (auth.uid() = id);
-
--- Conversations: usuario so ve as proprias (+ shared publicas)
-CREATE POLICY conversations_own ON conversations
-    FOR ALL USING (
-        auth.uid() = user_id
-        OR (is_shared = TRUE AND current_setting('request.method') = 'GET')
-    );
-
--- Messages: acesso via conversation (RLS cascading)
-CREATE POLICY messages_via_conversation ON messages
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM conversations c
-            WHERE c.id = messages.conversation_id
-            AND (c.user_id = auth.uid() OR c.is_shared = TRUE)
-        )
-    );
-
--- Analytics: usuario ve so os proprios eventos; admin ve todos
-CREATE POLICY analytics_own ON analytics_events
-    FOR SELECT USING (
-        auth.uid() = user_id
-        OR auth.jwt()->>'role' = 'admin'
-    );
-
--- Minds e mind_files: leitura publica, escrita so admin
-ALTER TABLE minds ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mind_files ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY minds_read_public ON minds
-    FOR SELECT USING (status = 'active');
-
-CREATE POLICY minds_admin_write ON minds
-    FOR ALL USING (auth.jwt()->>'role' = 'admin');
-
-CREATE POLICY mind_files_read_public ON mind_files
-    FOR SELECT USING (
-        EXISTS (SELECT 1 FROM minds m WHERE m.id = mind_files.mind_id AND m.status = 'active')
-    );
-
-CREATE POLICY mind_files_admin_write ON mind_files
-    FOR ALL USING (auth.jwt()->>'role' = 'admin');
-
--- =====================
--- FUNCTIONS & TRIGGERS
--- =====================
-
--- Auto-update updated_at
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER tr_profiles_updated_at
-    BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER tr_minds_updated_at
-    BEFORE UPDATE ON minds FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER tr_mind_files_updated_at
-    BEFORE UPDATE ON mind_files FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER tr_conversations_updated_at
-    BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
--- Counter cache: incrementa message_count e total_tokens na conversation
-CREATE OR REPLACE FUNCTION update_conversation_counters()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE conversations SET
-        message_count = message_count + 1,
-        total_tokens_used = total_tokens_used + COALESCE(NEW.tokens_input, 0) + COALESCE(NEW.tokens_output, 0),
-        last_message_at = NEW.created_at
-    WHERE id = NEW.conversation_id;
-
-    -- Tambem atualiza counters da mind
-    UPDATE minds SET
-        total_messages = total_messages + 1
-    WHERE id = (SELECT mind_id FROM conversations WHERE id = NEW.conversation_id);
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER tr_messages_counter
-    AFTER INSERT ON messages FOR EACH ROW EXECUTE FUNCTION update_conversation_counters();
-
--- Counter cache: incrementa total_conversations na mind
-CREATE OR REPLACE FUNCTION update_mind_conversation_counter()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE minds SET
-        total_conversations = total_conversations + 1
-    WHERE id = NEW.mind_id;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER tr_conversations_mind_counter
-    AFTER INSERT ON conversations FOR EACH ROW EXECUTE FUNCTION update_mind_conversation_counter();
+Evidência decisiva (`src/lib/ai/knowledge.ts:117-128`): o **caminho de leitura do app** (`getFileUrisFromDb`) faz:
 ```
-
-### 3.3 Diagrama de Relacionamentos
-
+innerJoin(fileUriCache, eq(fileUriCache.knowledgeDocumentId, knowledgeDocuments.id))
+  .where(eq(knowledgeDocuments.mindId, mind.id))
 ```
-profiles (1) ----< conversations (N) >---- minds (1)
-                        |
-                        |----< messages (N)
+**O app NÃO usa `local_path` para nada.** O JOIN é por `knowledge_document_id` (UUID). Logo o encoding NFD (DB-3) **não pode causar cache-miss no read-side** — ele só quebra os **scripts de WRITE** (`update-file-uris.sql` com `JOIN ON local_path = ...`).
 
-minds (1) ----< mind_files (N) ----< file_refresh_log (N)
+Encadeamento real do incidente M1 (20/21):
+1. **DB-3 (gatilho de escrita):** o JOIN por `local_path =` no script de ingest/refresh falhou para o doc M1 (NFD + extensão `.md` faltante) → a linha de cache de M1 **nunca foi inserida**. Resultado: 20/21.
+2. **DB-5 (impede a recuperação):** o `fix-m1-local-path.sql` tentou consertar via `INSERT ... ON CONFLICT (knowledge_document_id) DO UPDATE`. Mas **não existe UNIQUE em `knowledge_document_id`** → o `ON CONFLICT` lança erro e **aborta a transação inteira (BEGIN/COMMIT)**. A recuperação falha silenciosamente; o doc continua sem cache.
+3. **Read-side:** com a linha ausente, `getFileUrisFromDb` simplesmente retorna menos entradas (ou cai no manifest fallback) — não é "mismatch", é "linha não existe".
 
-analytics_events (standalone, refs: user, mind, conversation)
-```
+**Veredito:** DB-3 é o **gatilho histórico** do write-side (já mitigado pelo script LIKE de 16/03). **DB-5 é o bloqueador estrutural** que torna qualquer upsert de recuperação impossível — e continuará mordendo todo refresh futuro que dependa de `ON CONFLICT`. **Ordem de correção: DB-5 primeiro (destrava o upsert), DB-3 em seguida (elimina o gatilho na origem via NFC no ingest).** Corrigir DB-3 sem DB-5 deixa o pipeline frágil; corrigir DB-5 sem DB-3 faz o upsert funcionar mas o write-side ainda pode errar o alvo por encoding. Ambos são necessários, mas **DB-5 é o que "destrava o cache"** que o architect perguntou.
 
-### 3.4 Decisoes de Design Justificadas
+### Q2 — DB-2: ordem segura para adicionar FKs numa prod viva. Há órfãos? CASCADE é seguro?
 
-| Decisao | Justificativa |
-|---------|---------------|
-| UUID em vez de SERIAL para PKs | Permite criacao client-side (offline-first futuro), merge de dados, URLs nao sequenciais (seguranca). |
-| `messages` sem `updated_at` | Messages sao um append-only log. Imutabilidade garante integridade do historico. Se precisar "editar", cria-se novo record com referencia ao original. |
-| Counter caches (`total_conversations`, `total_messages`) | Evita COUNT(*) em queries frequentes (catalogo de minds, lista de conversas). Triggers mantem consistencia. |
-| `metadata JSONB` em messages e conversations | Extensibilidade sem migration. Permite adicionar campos (user_rating, was_regenerated, edit_history) sem ALTER TABLE. |
-| `model_config JSONB` em minds | Cada mente pode ter config diferente (temperatura, modelo). A/B testing de configs sem schema changes. |
-| Partial indexes | `expires_at WHERE status = 'active'` e `share_slug WHERE NOT NULL` economizam espaco e aceleram queries especificas. |
-| `analytics_events` com BIGSERIAL | Alto volume esperado. BIGSERIAL e mais eficiente que UUID para tabela de eventos. |
-| Tabela separada `file_refresh_log` | Auditoria de renovacoes. Permite diagnosticar problemas de ingestion e medir confiabilidade do pipeline. |
+**Há órfãos prováveis? SIM, baixo-mas-não-zero.** Dois vetores: (a) `users` foi migrado de Supabase p/ NextAuth — usuários antigos podem ter `user_id` que não existe mais na nova tabela `users`; (b) DB-1/sem-FK significa que **nada nunca garantiu** que esses `user_id` fossem válidos. Em prod com 1 user real o volume é baixo, mas a migração **DEVE** checar antes de assumir zero.
+
+**`ON DELETE CASCADE` é seguro aqui? NÃO universalmente — diferenciar por tabela:**
+- `conversations.user_id`, `mind_memories.user_id`, `debates.user_id` → **CASCADE faz sentido** (deletar user apaga seus dados pessoais; LGPD-friendly). Mas note que `conversations`→`messages`/`token_usage` já é CASCADE, então um delete de user vira um cascade profundo — **intencional, mas precisa ser conhecido** (não "cascade-delete não intencional", e sim cascade-delete esperado e desejado).
+- `token_usage.user_id` → **CASCADE é PERIGOSO**: é dado de **billing/auditoria**. Recomendo **`ON DELETE SET NULL`** (manter o registro de custo após o user sair) ou, melhor, **`ON DELETE RESTRICT`** + arquivamento explícito. Apagar histórico de custo por delete de user é perda de dado financeiro.
+- `rate_limits.user_id` → **CASCADE ok** (efêmero, tem TTL via DB-12 de qualquer forma).
+
+**Estratégia concreta de migração (nullable → backfill/clean → validate → enforce), por tabela:**
+1. **Auditar órfãos primeiro** (read-only): `SELECT count(*) FROM <t> LEFT JOIN users ON <t>.user_id = users.id WHERE users.id IS NULL` para as 5 tabelas. NÃO prosseguir sem este número.
+2. **Resolver órfãos** conforme política: deletar (rate_limits), ou reatribuir/anular (token_usage → considerar SET NULL e tornar a coluna nullable só nessa tabela), ou bloquear a migração se órfão em conversations/debates indicar bug a investigar.
+3. **Adicionar FK como `NOT VALID`** (Postgres): `ALTER TABLE <t> ADD CONSTRAINT <fk> FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE <policy> NOT VALID;` — isso **não trava a tabela** para escritas existentes e não re-valida linhas legadas no ato.
+4. **`VALIDATE CONSTRAINT`** num passo separado: `ALTER TABLE <t> VALIDATE CONSTRAINT <fk>;` — toma `SHARE UPDATE EXCLUSIVE` (não bloqueia reads/writes normais). Se falhar, há órfão que escapou do passo 2 → voltar.
+
+Drizzle não expressa `NOT VALID`/`VALIDATE` nativamente — esta migração deve ser **SQL manual versionado** rodando pelo runner do SYS-10, não `drizzle-kit push`.
+
+### Q3 — DB-4: já causou incidente em prod, ou o caminho nunca rodou?
+
+**Veredito: NÃO causou corrupção de dados em prod, e muito provavelmente o caminho `updated_at` nunca foi efetivamente persistido. Raciocínio pela evidência:**
+1. O `fix-m1-local-path.sql` está envolto em `BEGIN; ... COMMIT;`. Se o `UPDATE ... SET updated_at = NOW()` (linha 10) tivesse executado, o Postgres abortaria com `column "updated_at" of relation "knowledge_documents" does not exist` **antes do COMMIT** → rollback total → **zero efeito**. Atomicidade garante "tudo ou nada".
+2. A MEMORY do projeto registra "M1 fix" como **resolvido** e o estado atual é **21/21 URIs renovadas**. Isso só é consistente se o conserto efetivo veio por **outro** caminho — e veio: `update-file-uris-2026-03-16.sql` usa `UPDATE file_uri_cache ... LIKE pattern` (NFD-safe) e **não toca `knowledge_documents.updated_at`**. Esse é o script que de fato funcionou.
+3. Conclusão: `fix-m1-local-path.sql` é um **artefato morto** — ou nunca rodou em prod, ou rodou, abortou no `UPDATE`, e foi abandonado em favor do script de 16/03. Em nenhum cenário houve dado corrompido (graças ao BEGIN/COMMIT). **O "incidente" foi um script que não pôde completar, não um dano persistido.** Risco residual = **trap futura**: se alguém reusar o script como template, vai bater no mesmo erro. Fix de 15 min: remover a linha do `updated_at` e arquivar o script. **Não é Critical** — daí o rebaixo p/ High em §1.
+
+### Q4 — DB-13 (race de rate_limit): observado em prod ou teórico?
+
+**Nem observado nem teórico — a premissa está incorreta** (ver §1, DB-13). O design é INSERT-append + SUM, não upsert-increment. Não há race de contagem: dois requests concorrentes inserem duas linhas, e o `SUM(request_count)` as soma corretamente. Um UNIQUE em (user_id, action, window_start) **quebraria** o limiter. O problema real associado é crescimento ilimitado, já coberto por **DB-12**. **Recomendo NÃO tratar DB-13 como débito de integridade** — não altera prioridade de nada porque o "risco" não existe.
+
+### Q5 — DB-14: confirmar zero reads de `storage_path` antes de aprovar o drop.
+
+**CONFIRMADO: zero reads em `src/`.** `grep -rn '\.storagePath|storage_path' src/` retorna **nada** fora de `schema/` (declaração) e `scripts/seed-db.ts` (escrita). A coluna é só populada no seed, nunca lida pelo runtime. **Drop aprovável** após remover a escrita no seed (DB-16). Como é DROP de coluna, exige aprovação explícita de governança no PR de cleanup (Tema A).
 
 ---
 
-## 4. Estrategia de Migracao
+## 4. Recomendações (ordem de resolução — ótica de dados)
 
-### 4.1 Migracao de `minds_manifest.json` para Database
+**Concordo com a tese do architect ("SYS-10 antes do Tema C"), com um ajuste cirúrgico.**
 
-**Abordagem: Seed Script + Dual-Read Transition**
+**Confirmo a ordem não-negociável: SYS-10 (runner de migração automatizado) DEVE preceder o hardening de schema (Tema C).** Razão de dados: as migrações de hardening (FKs com `NOT VALID/VALIDATE`, dedupe + UNIQUE, índices `CONCURRENTLY`) são **multi-step, ordem-sensíveis e precisam de rollback determinístico** numa prod viva. Aplicá-las via psql manual por SSH (estado atual) é exatamente o anti-padrão que gerou DB-4/DB-5/DB-8. Sem runner versionado, todo hardening reintroduz o risco que está tentando eliminar.
 
-#### Fase 1: Seed (1-2h)
+**Ajuste:** há **3 quick-wins críticos que NÃO precisam esperar SYS-10** porque são correções de **código/script**, não DDL em prod:
+- **DB-5 fix de script** + **DB-4** (remover `updated_at`): são edições nos `*.sql`/serviço, não migração de schema. Podem ir já.
+- O **UNIQUE em `file_uri_cache`** (a parte DDL de DB-5) **espera o runner** — mas o dedupe + a remoção do `ON CONFLICT` quebrado pode ser preparado antes.
 
-```typescript
-// scripts/seed-minds-from-manifest.ts
-// Le minds_manifest.json e insere no Supabase
-
-import manifest from '../data/minds_manifest.json';
-
-for (const [mindName, mindData] of Object.entries(manifest.minds)) {
-    // 1. Criar registro na tabela `minds`
-    const mind = await db.insert(minds).values({
-        name: mindName,
-        slug: slugify(mindName),  // "antonio-napole"
-        system_prompt: buildSystemPrompt(mindName), // extrair de gemini.ts
-        status: 'active',
-    }).returning();
-
-    // 2. Criar registros em `mind_files` para cada arquivo
-    for (const file of mindData.files) {
-        await db.insert(mindFiles).values({
-            mind_id: mind.id,
-            file_name: file.displayName,
-            display_name: file.displayName,
-            gemini_file_name: file.name,
-            file_uri: file.uri,
-            mime_type: file.mimeType,
-            local_path: file.localPath,
-            status: 'expired',  // IMPORTANTE: marcar como expired (URIs de 2025-12-31)
-            uploaded_at: new Date(mindData.last_updated),
-            expires_at: new Date(
-                new Date(mindData.last_updated).getTime() + 48 * 60 * 60 * 1000
-            ),
-        });
-    }
-}
-```
-
-**Nota critica:** Os URIs atuais do manifest datam de `2025-12-31`. Eles expiraram ha mais de 2 meses. O seed DEVE marcar todos como `status: 'expired'` e triggerar re-ingestion imediata.
-
-#### Fase 2: Re-ingestion Automatica (4-6h)
-
-```typescript
-// Supabase Edge Function: refresh-expired-files
-// Executada via cron a cada 12 horas (margem de seguranca sobre 48h TTL)
-
-const expiredFiles = await db
-    .select()
-    .from(mindFiles)
-    .where(
-        or(
-            eq(mindFiles.status, 'expired'),
-            lt(mindFiles.expires_at, new Date(Date.now() + 6 * 60 * 60 * 1000)) // expira em < 6h
-        )
-    );
-
-for (const file of expiredFiles) {
-    try {
-        // 1. Re-upload do Supabase Storage (ou filesystem local)
-        const result = await fileManager.uploadFile(filePath, { mimeType: file.mime_type });
-
-        // 2. Atualizar registro
-        await db.update(mindFiles)
-            .set({
-                file_uri: result.file.uri,
-                gemini_file_name: result.file.name,
-                status: 'active',
-                expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000),
-                last_refreshed_at: new Date(),
-                refresh_count: sql`refresh_count + 1`,
-            })
-            .where(eq(mindFiles.id, file.id));
-
-        // 3. Log de auditoria
-        await db.insert(fileRefreshLog).values({
-            mind_file_id: file.id,
-            old_uri: file.file_uri,
-            new_uri: result.file.uri,
-            status: 'success',
-        });
-    } catch (error) {
-        await db.update(mindFiles)
-            .set({ status: 'error', error_message: error.message })
-            .where(eq(mindFiles.id, file.id));
-    }
-}
-```
-
-#### Fase 3: Dual-Read Transition (2-3h)
-
-Para evitar downtime durante a migracao:
-
-1. **Semana 1:** `gemini.ts` le do DB, fallback para manifest JSON se DB falhar.
-2. **Semana 2:** Confirmar que DB funciona, remover fallback.
-3. **Semana 3:** Remover `minds_manifest.json` e codigo de leitura de filesystem.
-
-### 4.2 Upload dos Originais para Supabase Storage
-
-```
-knowledge_base/
-  Antonio Napole/
-    M1 - Historia de Vida...  -->  supabase-storage://minds/antonio-napole/m1-historia.txt
-    analysis/...               -->  supabase-storage://minds/antonio-napole/analysis/...
-```
-
-- Normalizar nomes de arquivo (remover acentos, caracteres especiais)
-- Manter referencia `storage_path` na tabela `mind_files`
-- Supabase Storage serve como backup duravel e source-of-truth para re-uploads
-
-### 4.3 Estrategia de Caching
-
-| Camada | O que cachear | TTL | Invalidacao |
-|--------|--------------|-----|-------------|
-| **In-memory (Node.js)** | Lista de minds ativos | 5 min | On mind status change (Supabase Realtime) |
-| **In-memory (Node.js)** | File URIs por mind | 30 min | On file refresh (Supabase Realtime) |
-| **Supabase Realtime** | Subscricao em `minds` e `mind_files` changes | Streaming | Automatica |
-| **Gemini Cached Content** | Contexto de arquivos pre-processado | 1h (Gemini TTL) | On file refresh |
-| **Client-side** | Conversation list, mind catalog | 2 min | On navigation + SWR/React Query |
-
-**Nota sobre Gemini Cached Content API:** Esta API permite criar um cache server-side do contexto de arquivos no Gemini. Em vez de enviar 21 file URIs a cada mensagem, voce cria um `cachedContent` uma vez e referencia ele nas chamadas subsequentes. Isso resolve SYS-012 (context bloat) e SYS-013 (stateless recreation) simultaneamente. O TTL minimo e 5 minutos, entao precisa de refresh periodico, mas e drasticamente mais eficiente.
+**Ordem recomendada do track DB:**
+1. **(agora, sem runner)** DB-4 (deletar `updated_at` do script) + DB-3 (NFC no ingest + backfill via script LIKE já existente) + auditoria read-only de órfãos (DB-2) e de duplicatas (DB-5). Zero DDL, alto sinal, destrava diagnóstico.
+2. **(habilitador) SYS-10 + SYS-11** — runner de migração gated no deploy + smoke `/api/chat`. **Pré-requisito de tudo que é DDL.**
+3. **(Tema C, via runner)** dedupe → **UNIQUE `file_uri_cache`** (DB-5 DDL, destrava upsert) → **índices** (DB-6, via `CREATE INDEX CONCURRENTLY`) → **FKs** `NOT VALID`+`VALIDATE` com política por tabela (DB-2 + DB-15) → **CHECKs** (DB-9 + DB-11) → **triggers `updated_at`** (DB-10).
+4. **(Tema E)** pipeline Gemini auto-cura: re-upload sob expiração (SYS-1) + mover refresh p/ script Drizzle versionado (DB-8).
+5. **(Tema A, PR único)** drop `storage_path` (DB-14) + remover escrita no seed (DB-16) + limpeza Supabase/Vercel.
+6. **(retenção)** DB-12 (job agendado; absorve DB-13) — não bloqueante.
 
 ---
 
-## 5. Respostas ao Architect
+## 5. Migration Safety Notes (prod viva, dados existentes)
 
-Respostas as perguntas da Secao 8 do DRAFT.
+Para as duas correções críticas, o passo obrigatório é **resolver duplicatas/órfãos ANTES de adicionar a constraint** — uma constraint adicionada sobre dados sujos falha e aborta.
 
-### Pergunta 1: `file_refresh_jobs` separada ou query `mind_files` diretamente?
+### DB-5 — UNIQUE em `file_uri_cache(knowledge_document_id)`
+1. **Detectar duplicatas** (read-only):
+   `SELECT knowledge_document_id, count(*) FROM file_uri_cache GROUP BY 1 HAVING count(*) > 1;`
+2. **Dedupe mantendo a entrada mais fresca** (a com maior `updated_at`/`expires_at`):
+   deletar todas menos a `row_number() OVER (PARTITION BY knowledge_document_id ORDER BY updated_at DESC) = 1`. Fazer dentro de transação, com `SELECT` de verificação antes do COMMIT.
+3. **Criar o índice único sem travar a tabela:**
+   `CREATE UNIQUE INDEX CONCURRENTLY file_uri_cache_kdid_uniq ON file_uri_cache(knowledge_document_id);`
+   (`CONCURRENTLY` não pode rodar dentro de transação — o runner do SYS-10 deve suportar statements fora de tx.)
+4. **Promover a constraint** (opcional, para o `ON CONFLICT` aceitar): com o índice único já existente, `ON CONFLICT (knowledge_document_id)` passa a funcionar sem `ADD CONSTRAINT`. Se quiser a constraint nomeada: `ALTER TABLE file_uri_cache ADD CONSTRAINT ... UNIQUE USING INDEX file_uri_cache_kdid_uniq;`
+5. **Rollback:** `DROP INDEX CONCURRENTLY file_uri_cache_kdid_uniq;` — seguro, não afeta dados.
 
-**Recomendacao: Query `mind_files` diretamente + tabela de log separada.**
+### DB-2 — FKs `user_id` → `users(id)`
+1. **Auditar órfãos por tabela** (read-only, ver §3-Q2 passo 1). **Gate:** não prosseguir com órfão > 0 sem decisão explícita.
+2. **Limpar/reatribuir órfãos** conforme política por tabela (rate_limits: delete · token_usage: SET NULL + tornar coluna nullable · conversations/debates: investigar antes de deletar).
+3. **Adicionar FK `NOT VALID`** (não trava, não re-valida legado no ato), com `ON DELETE` correto por tabela:
+   - conversations/mind_memories/debates → `ON DELETE CASCADE`
+   - token_usage → `ON DELETE SET NULL` (preservar billing)
+   - rate_limits → `ON DELETE CASCADE`
+4. **`VALIDATE CONSTRAINT`** num passo separado (lock leve `SHARE UPDATE EXCLUSIVE`). Falha aqui = órfão escapou → rollback do passo e voltar ao 2.
+5. **Rollback:** `ALTER TABLE <t> DROP CONSTRAINT <fk>;` por tabela — instantâneo, sem efeito em dados.
 
-Nao recomendo uma tabela `file_refresh_jobs` (job queue). Razoes:
-
-- **Simplicidade:** A query `WHERE status = 'expired' OR expires_at < NOW() + INTERVAL '6 hours'` com o partial index `idx_mind_files_expires_at` e eficiente e suficiente.
-- **Edge Function como scheduler:** Uma Supabase Edge Function rodando via cron (a cada 12h) faz a query, processa, e atualiza. Sem necessidade de job queue.
-- **Auditoria:** A tabela `file_refresh_log` (proposta no schema) registra cada tentativa de refresh. Isso fornece o historico que uma job queue forneceria, sem a complexidade de gerenciar estados de jobs.
-- **Escalabilidade futura:** Se o volume de minds crescer para centenas, ai sim considerar pg_cron + pg_task_queue ou um sistema como Inngest/Trigger.dev. Para o MVP com ~5-20 minds, over-engineering.
-
-### Pergunta 2: `content TEXT` com `metadata JSONB` ou totalmente normalizado?
-
-**Recomendacao: `content TEXT` + `metadata JSONB` (abordagem hibrida).**
-
-```sql
--- Abordagem recomendada (ja no schema proposto):
-messages (
-    content TEXT NOT NULL,       -- Texto puro da mensagem
-    tokens_input INTEGER,        -- Extraido de usageMetadata (coluna dedicada)
-    tokens_output INTEGER,       -- Extraido de usageMetadata (coluna dedicada)
-    model_used TEXT,             -- Coluna dedicada (query frequente)
-    response_time_ms INTEGER,    -- Coluna dedicada (metricas)
-    metadata JSONB DEFAULT '{}'  -- Tudo mais: feedback, rating, was_regenerated, etc.
-)
-```
-
-Justificativa:
-- **Campos com query frequente** (`tokens_*`, `model_used`, `response_time_ms`) sao colunas dedicadas. Permite indexar, agregar (SUM, AVG), e filtrar eficientemente.
-- **Campos extensiveis** (`metadata JSONB`) para dados que variam ou sao adicionados ao longo do tempo. Nao requer ALTER TABLE.
-- **Totalmente normalizado** (ex: tabela `message_metadata` separada) adiciona JOINs desnecessarios para dados que sempre sao lidos junto com a mensagem.
-
-### Pergunta 3: RLS no nivel de `conversations` ou tambem em `messages`?
-
-**Recomendacao: RLS em AMBOS, com policy em `messages` cascading via `conversations`.**
-
-Ja implementado no schema proposto. A policy em `messages` faz EXISTS na tabela `conversations`, verificando ownership. Isso garante:
-
-1. **Defense in depth:** Mesmo que alguem consiga bypass da camada de aplicacao, o banco bloqueia acesso a mensagens de outros usuarios.
-2. **Shared conversations:** A policy permite leitura de mensagens de conversas marcadas como `is_shared = TRUE`.
-3. **Admin access:** Para analytics, usar uma service role key (bypass RLS) em Edge Functions. NUNCA expor service key ao client.
-
-**Sobre admin access para analytics:** Criar uma Edge Function `/api/admin/analytics` que usa `supabase.auth.admin` (service role). Protegida por middleware que verifica `auth.jwt()->>'role' = 'admin'`. A tabela `analytics_events` ja tem RLS policy para admin.
-
-### Pergunta 4: Manter manifest como cache/fallback ou migrar totalmente?
-
-**Recomendacao: Migracao total com periodo de transicao (3 semanas).**
-
-- **Semana 1-2:** Dual-read (DB primary, manifest fallback). Monitora taxa de fallback.
-- **Semana 3:** Se fallback rate = 0%, remove manifest read. Arquivo permanece no repo como referencia historica.
-- **Nao manter como cache:** O manifest JSON cria um problema de sincronizacao. Duas fontes de verdade levam inevitavelmente a inconsistencia. O DB e a unica source-of-truth apos migracao.
-- **Seeding script** deve ser idempotente (pode rodar varias vezes sem duplicar dados). Usar `ON CONFLICT (name) DO UPDATE` no INSERT.
-
-### Pergunta 5: Tabelas de analytics separadas ou materialized views?
-
-**Recomendacao: Abordagem em 2 fases.**
-
-**Fase 1 (MVP):** Tabela `analytics_events` (event sourcing) + queries diretas.
-- Suficiente para < 100K eventos.
-- Queries como "mind mais popular" ou "media de mensagens por conversa" sao rapidas em tabela pequena.
-
-**Fase 2 (Escala):** Materialized views para dashboards.
-
-```sql
--- Exemplo: View materializada para dashboard de minds
-CREATE MATERIALIZED VIEW mv_mind_stats AS
-SELECT
-    m.id,
-    m.name,
-    m.total_conversations,
-    m.total_messages,
-    COUNT(DISTINCT c.user_id) as unique_users,
-    AVG(c.message_count) as avg_messages_per_conversation,
-    AVG(c.total_tokens_used) as avg_tokens_per_conversation,
-    MAX(c.last_message_at) as last_activity
-FROM minds m
-LEFT JOIN conversations c ON c.mind_id = m.id
-GROUP BY m.id, m.name, m.total_conversations, m.total_messages;
-
--- Refresh via cron (pg_cron ou Edge Function)
--- REFRESH MATERIALIZED VIEW CONCURRENTLY mv_mind_stats;
-```
-
-**Por que nao materialized views desde o inicio:**
-- Adiciona complexidade de manutencao (refresh scheduling).
-- Os counter caches em `minds` e `conversations` ja fornecem os dados mais frequentes em tempo real.
-- Materialized views so compensam quando as queries base ficam lentas (> 100K events).
+**Regra de ouro para ambas:** todo esse fluxo roda pelo **runner versionado do SYS-10** (statements `CONCURRENTLY`/`NOT VALID` exigem suporte a múltiplos statements fora de transação única), **nunca** por psql manual ad-hoc. Snapshot `pg_dump` antes de qualquer passo destrutivo (dedupe/clean) — sem tabelas de backup no DB (regra do projeto).
 
 ---
 
-## 6. Estimativa de Esforco
+## 6. Recálculo de Esforço do Track DB
 
-### 6.1 Implementacao da Arquitetura de Dados
+| Faixa | Débitos | Horas |
+|-------|---------|-------|
+| Quick-wins (sem runner) | DB-4, DB-3 (parte código), audit órfãos/dupes | ~3.5h |
+| DDL via runner (Tema C) | DB-5, DB-6, DB-2, DB-9, DB-10, DB-11, DB-15 | ~11h |
+| Análise/ADR | DB-1 | ~3h |
+| Pipeline/scripts (Tema E) | DB-8 | ~4h |
+| Cleanup | DB-14, DB-16 | ~1.25h |
+| Retenção | DB-12 (absorve DB-13) | ~2.5h |
+| Low/flag | DB-7, DB-17, DB-18 | ~1.5h |
+| **Total track DB** | 14 originais + 4 novos | **~26.75h** |
 
-| Tarefa | Horas | Dependencias | Complexidade |
-|--------|-------|-------------|-------------|
-| Setup Supabase project + connection | 1-2 | Nenhuma | Baixa |
-| Schema creation (migrations) | 3-4 | Setup | Media |
-| Drizzle ORM setup + schema types | 2-3 | Schema | Media |
-| RLS policies + testing | 3-4 | Schema | Alta |
-| Seed script (manifest -> DB) | 2-3 | Schema + Drizzle | Media |
-| File refresh Edge Function (cron) | 4-6 | Schema + Gemini integration | Alta |
-| Upload originais para Supabase Storage | 1-2 | Setup | Baixa |
-| Supabase Auth integration (Next.js) | 4-6 | Setup | Media |
-| Refactor `gemini.ts` para usar DB | 4-6 | Schema + Drizzle + Auth | Alta |
-| Conversation persistence (CRUD) | 4-6 | Schema + Auth | Media |
-| Analytics events integration | 2-3 | Schema | Baixa |
-| Dual-read transition + manifest removal | 2-3 | Tudo acima | Baixa |
-| **TOTAL** | **32-48h** | | |
-
-### 6.2 Complexidade Geral
-
-| Dimensao | Score (1-5) | Justificativa |
-|----------|-------------|---------------|
-| Scope | 4 | 7 tabelas, RLS, triggers, Edge Functions, migracao de dados |
-| Integration | 3 | Supabase SDK + Gemini SDK + Next.js Server Actions |
-| Infrastructure | 3 | Supabase project, Edge Functions, cron scheduling |
-| Knowledge | 2 | Supabase/Postgres sao bem documentados; equipe familiarizada com Next.js |
-| Risk | 3 | Migracao de estado efemero para persistente; File URI refresh e ponto critico |
-| **Total** | **15** | **Classe STANDARD** |
-
-### 6.3 Dependencias de Outros Debitos
-
-| Este trabalho depende de | Motivo |
-|--------------------------|--------|
-| SYS-027 (Middleware) | Auth middleware precisa existir para proteger rotas |
-| SYS-021 (Refactor gemini.ts) | Separacao de concerns facilita integracao com DB |
-| SYS-007 (Graceful env handling) | DB connection string tambem sera env var |
-
-| Este trabalho DESBLOQUEIA | Motivo |
-|---------------------------|--------|
-| UX-004 (Chat persistence) | DB fornece storage para conversas |
-| SYS-002 (Rate limiting persistente) | DB armazena contadores por usuario |
-| SYS-010 (File URI renewal) | `mind_files.expires_at` + Edge Function cron |
-| CROSS-002 (Auth + Persistence) | Supabase Auth + DB resolvem conjuntamente |
-| CROSS-003 (Stateful architecture) | DB e a base para estado |
-| CROSS-006 (KB management) | Admin CRUD sobre tabelas `minds` + `mind_files` |
-| Feature: Multi-Mind Debates | Supabase Realtime para comunicacao entre sessoes |
-| Feature: Mind Memory | `conversations.summary` para recall cross-session |
-| Feature: Conversation Sharing | `conversations.is_shared` + `share_slug` |
+> Exclui SYS-10/SYS-11 (track Sistema, pré-requisito), contados pelo @architect.
 
 ---
 
-## 7. Recomendacoes Finais
-
-### Ordem de Implementacao Recomendada
-
-| Sprint | Tarefa | Horas | Entrega |
-|--------|--------|-------|---------|
-| **Sprint 1** | Setup Supabase + Schema + Drizzle + Auth basico | 10-15 | DB operacional, login funcionando |
-| **Sprint 2** | Seed script + File refresh cron + Upload Storage | 8-12 | Minds no DB, URIs renovando automaticamente |
-| **Sprint 3** | Refactor gemini.ts + Conversation CRUD + Persistence | 10-14 | Chat persistido, historico sobrevive refresh |
-| **Sprint 4** | Analytics + RLS fine-tuning + Dual-read removal | 6-8 | Metricas, seguranca hardened, manifest removido |
-
-### Alertas Criticos
-
-1. **Os File URIs atuais estao EXPIRADOS.** A data `2025-12-31` no manifest significa que os 21 arquivos expiraram em `2026-01-02`. O sistema esta 100% inoperante para chat. A re-ingestion e a tarefa mais urgente, mesmo antes do DB setup. Pode ser feita via script CLI como workaround imediato (`npx tsx scripts/ingest_mind.ts "Antonio Napole"`).
-
-2. **Gemini Cached Content API deve ser avaliada ANTES de decidir a estrategia de context injection.** Se usarmos cached content, o fluxo de `gemini.ts` muda drasticamente (cria cache uma vez, referencia em todas as mensagens). Isso impacta o schema (`mind_cached_content_id`?) e o cron de refresh.
-
-3. **Supabase free tier tem limites de Edge Function invocations.** Se o cron de refresh rodar a cada 12h com 21 arquivos, sao ~42 invocacoes/dia. O free tier permite 500K/mes -- confortavel. Mas monitorar se o numero de minds crescer.
-
----
-
-*Este documento foi gerado como Phase 5 de Brownfield Discovery por @data-engineer (Dara).*
-*Ele valida e expande os debitos de dados do Phase 4 DRAFT e propoe a arquitetura completa de dados para o projeto.*
-
-**Proximo passo:**
-- **Phase 6:** @ux-design-expert revisa debitos de UX e responde perguntas de design
-- **Phase 7:** @qa revisa debitos de qualidade e estabelece estrategia de testes
-
-*Synkra AIOX v2.0*
+*Revisão Fase 5 concluída. Os 3 🔴 Critical originais foram reavaliados: apenas DB-5 permanece Critical; DB-2 e DB-4 rebaixados para High com justificativa. O gargalo de fechamento do assessment (Seção 2) está resolvido. Aguarda Fase 6 (UX) e Fase 8 (finalização por @architect).*

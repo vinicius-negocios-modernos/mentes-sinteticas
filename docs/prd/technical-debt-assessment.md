@@ -1,748 +1,317 @@
 # Technical Debt Assessment - FINAL
+**Projeto:** Mentes Sintéticas | **Data:** 2026-05-30 | **Gate:** APPROVED (Fase 7 reworks applied)
 
-## Mentes Sinteticas
+**Stack:** Next.js 16.1.1 + Drizzle/PostgreSQL 16 + NextAuth v5 + Gemini · **Autor:** Aria (@architect) · **Fase 8** (finalização) do Brownfield Discovery.
 
-## Data: 2026-03-06
-
-**Phase:** Brownfield Discovery - Phase 8 (Final Consolidation)
-**Author:** @architect (Aria)
-**Status:** FINAL - Aprovado pelo QA Gate (Phase 7)
-**Input Documents:**
-- `docs/prd/technical-debt-DRAFT.md` (Phase 4 - @architect)
-- `docs/reviews/db-specialist-review.md` (Phase 5 - @data-engineer)
-- `docs/reviews/ux-specialist-review.md` (Phase 6 - @ux-design-expert)
-- `docs/reviews/qa-review.md` (Phase 7 - @qa)
-
-**Project Stats:** ~393 linhas de TypeScript/TSX em 6 arquivos fonte. Estagio de prototipo single-user.
+> **Origem:** consolidação de `system-architecture.md` (Fase 1, SYS), `DB-AUDIT.md` (Fase 2) re-validado por @data-engineer (Fase 5, `db-specialist-review.md`), `frontend-spec.md` (Fase 3) re-validado por @ux-design-expert (Fase 6, `ux-specialist-review.md`), e o QA-gate de @qa (Fase 7, `qa-review.md`).
+> **Mudanças desta versão vs DRAFT (42 débitos):** +SYS-15/SYS-16 (gaps de QA), −DB-13 (rejeitado, fundido em DB-12), +DB-15/16/17/18, +UX-15/16, severidades re-balanceadas (DB-2/4 🔴→🟠, DB-7 🟠→🟡, UX-1 🟠→🟡 flagged). **Total final: 49 débitos.**
+> **Substitui:** a versão de 2026-03-06 deste arquivo (predatava este assessment — inputs desalinhados).
+> **Escala:** 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low.
 
 ---
 
 ## Executive Summary
 
-- **Total de debitos:** 65
-- **Criticos:** 7 | **Altos:** 26 | **Medios:** 22 | **Baixos:** 10
-- **Esforco total estimado:** 350-470 horas (remediacao completa)
-- **Core (P0+P1):** 180-250 horas
-- **Estado atual do sistema:** INOPERANTE -- File URIs do Gemini expiraram em 2026-01-02 (ha mais de 2 meses). Nenhuma conversa funciona.
+- **Total de débitos:** **49** (DRAFT tinha 42; +7 líquido após reworks da Fase 7).
+- **Por severidade:** 🔴 **Critical 1** · 🟠 **High 11** · 🟡 **Medium 22** · 🟢 **Low 15**.
+- **Esforço total estimado (normalizado em horas):** **~135–165 horas** de engenharia.
+  - **Track DB:** ~26.75h (de @data-engineer, Fase 5).
+  - **Track UX:** ~66–96h (os 11–16 dias-dev da Fase 6 a 6 h produtivas/dia; exclui produção de áudio de UX-1 se virar must-fix, que é entrega de conteúdo).
+  - **Track Sistema:** ~42–43h (SYS-1/10/11 infra + SYS-15/16 segurança/observabilidade + SYS-9 testes + demais).
+- **A foto de risco real:** a arquitetura `route → service → db` e a taxonomia de erros são fortes e devem ser **preservadas**. O risco concentra-se em quatro eixos: (1) integridade de dados não-blindada no DB, (2) pipeline de deploy/knowledge sem rede de segurança automatizada, (3) **dependências com CVEs HIGH não-corrigidas tocando o próprio track de hardening** (descoberta da Fase 7), e (4) observabilidade instrumentada mas com alerting não-validado. O 🔴 único (DB-5) destrava o cache Gemini.
 
-O projeto Mentes Sinteticas e um prototipo funcional de chat com "mentes sinteticas" (clones digitais de pensadores historicos) construido com Next.js App Router + Google Gemini API. Apesar da visao ambiciosa, o prototipo possui gaps criticos em seguranca (zero autenticacao, zero rate limiting), persistencia (zero banco de dados), e experiencia de usuario (zero streaming, zero historico). O sistema esta atualmente 100% inoperante devido a expiracao dos File URIs do Gemini.
-
-A analise envolveu 4 especialistas (@architect, @data-engineer, @ux-design-expert, @qa) e identificou 65 debitos unicos com grafo de dependencias validado, stack tecnologica consensual (Supabase + Drizzle + shadcn/ui + Vercel + Vercel AI SDK), e plano de resolucao em 6 fases dependency-aware.
-
----
-
-## FASE 0: Recuperacao Imediata
-
-**Estado:** O campo `last_updated` no `minds_manifest.json` e `2025-12-31T03:58:38.971Z`. Os File URIs do Gemini expiram 48 horas apos upload. Portanto, todos os 21 arquivos expiraram em **2026-01-02**. O sistema esta inoperante ha mais de 2 meses -- nenhuma conversa com nenhuma mente funciona.
-
-**Acao imediata (antes de qualquer planejamento de sprint):**
-
-| # | Acao | Horas | Dependencias | Responsavel |
-|---|------|-------|-------------|-------------|
-| 1 | Validar idempotencia do script `ingest_mind.ts` (verificar se re-executar cria duplicatas no Gemini File API) | 0.5 | Nenhuma | @dev |
-| 2 | Re-executar ingestion via CLI: `npx tsx scripts/ingest_mind.ts "Antonio Napole"` | 1-2 | Validacao de idempotencia | @dev |
-| 3 | Smoke test manual: abrir chat, enviar mensagem, confirmar resposta | 0.5 | Re-ingestion concluida | @qa |
-| 4 | Quick fixes: `lang="pt-BR"` no layout.tsx, deletar `page.module.css`, remover console.logs | 0.5 | Nenhuma | @dev |
-
-**Esforco total Fase 0: 2.5-3.5 horas**
-
-**ALERTA:** O script `ingest_mind.ts` pode nao ser idempotente -- ninguem verificou se re-executar cria duplicatas. Validar antes de rodar.
+> **Mudança de severidade crítica vs DRAFT:** os 3 🔴 Critical do DRAFT eram todos de DB. A Fase 5 rebaixou DB-2 e DB-4 para High com evidência de código (sem data-loss/runtime ativo; atomicidade BEGIN/COMMIT protege). **Resta apenas DB-5 como Critical** — o `ON CONFLICT` sem UNIQUE que impede a recuperação do cache de File URI.
 
 ---
 
-## Inventario Completo de Debitos
+## Inventário Completo de Débitos (validado)
 
-### Sistema (validado por @architect + @qa)
+### Tabela 1 — Débitos de Sistema (16)
 
-#### Seguranca
+| ID | Débito | Severidade | Horas | Prioridade |
+|----|--------|-----------|-------|-----------|
+| **SYS-15** | Dependências com CVEs HIGH não monitoradas: `drizzle-orm` 0.45.1 (SQL-injection, fix 0.45.2) + `next` 16.1.1 (middleware-bypass/CSRF/XSS-CSP-nonce/DoS) + 6 transitivas; sem `npm audit` gate no CI | 🟠 High | 3–4h | **P1** |
+| **SYS-1** | Gemini File URI expira (~48h), mantida viva por cron externo na VPS; app depende da freshness do cache. **SPOF sem alerta verificável** (ver SYS-16) | 🟠 High | 6–8h | **P1** |
+| **SYS-10** | Migrations aplicadas manualmente via SSH tunnel; sem runner automatizado no deploy | 🟠 High | 8–10h | **P1** |
+| **SYS-9** | **30 test files / 5 testes de componente (4 a11y-only) / 56 componentes** — 5/56 ≈ 9% cobertura de componente; lógica de UI (estado do chat, streaming, token-warning, scroll) sem rede de segurança | 🟠 High | 12–16h | **P2** |
+| **SYS-2** | NextAuth pinado em `5.0.0-beta.30` (beta) — caminho crítico; quebras beta→beta possíveis, sem LTS. **Distinto de SYS-15** (estabilidade de API ≠ CVE) | 🟠 High | 4–6h | **P2** |
+| **SYS-16** | Sentry **totalmente instrumentado** (`instrumentation.ts` + 3 configs + `logger.ts`) mas cobertura de alerting/incident-response **não validada**; cron SYS-1 é SPOF sem alarme verificável de falha | 🟡 Medium | 3–4h | **P2** |
+| **SYS-11** | Sem smoke test pós-deploy; healthcheck do cron só testa `GET /`. **e2e existe** (4 specs Playwright + 1 integração de middleware) — o gap real é **e2e do debate + smoke de resposta Gemini real** (não "zero e2e") | 🟡 Medium | 4–6h | **P2** |
+| **SYS-7** | Dois SDKs Gemini coexistem (`@ai-sdk/google` streaming + `@google/generative-ai` legacy/memory) | 🟡 Medium | 3–4h | **P3** |
+| **SYS-5** | Validação de env parcial — só `GEMINI_*` via Zod; `DATABASE_URL`/`AUTH_SECRET`/limites lidos raw | 🟡 Medium | 2–3h | **P3** |
+| **SYS-8** | `chat/route.ts` usa string-matching no catch em vez da taxonomia `AppError`/`classifyError` existente | 🟡 Medium | 1–2h | **P3** |
+| **SYS-14** | `api/auth/signup/route.ts` (rota **pública, não-autenticada**) importa `@/db` direto **E não tem validação Zod** (valida `password.length < 6` à mão, sem formato de e-mail/schema). Apenas **3/11 rotas** validam input. Gap de input-validation + boundary leak | 🟡 Medium | 2–3h | **P3** |
+| **SYS-3** | CI (`ci.yml`, `e2e.yml`) ainda injeta `NEXT_PUBLIC_SUPABASE_*` após remoção do Supabase | 🟡 Medium | 0.5h | **P3** |
+| **SYS-4** | `@vercel/analytics` + `@vercel/speed-insights` embarcados mas app não está na Vercel; falham em prod | 🟡 Medium | 1h | **P3** |
+| **SYS-12** | Side-effects fire-and-forget (usage, memory extract, cleanup) — falhas só logadas, sem retry/DLQ | 🟢 Low | 4h | **P4** |
+| **SYS-13** | Strings PT-BR hardcoded em rotas/erros apesar de módulo `i18n/` existir | 🟢 Low | 3–4h | **P4** |
+| **SYS-6** | URLs de prod + magic constants hardcoded (`NEXTAUTH_URL`, `MAX_FILE_URIS_PER_REQUEST=8`, rate defaults) | 🟢 Low | 1–2h | **P4** |
 
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| SYS-001 | **No authentication system.** App publicamente acessivel. Qualquer pessoa consome creditos da Gemini API sem restricao. | CRITICO | 12-16 | P0 | SYS-027 (middleware), SYS-028 (security headers) |
-| SYS-002 | **No rate limiting.** Sem throttling per-IP ou per-session. Chamadas ilimitadas a API. | CRITICO | 6-8 | P0 | SYS-027 (middleware), DATABASE SETUP (limites persistentes) |
-| SYS-003 | **No input validation on messages.** Sem limites de tamanho, content filtering, ou protecao contra prompt injection. | CRITICO | 4-6 | P0 | Nenhuma |
-| SYS-004 | **No input sanitization no mindId URL parameter.** URL-decoded e passado diretamente a lookups de filesystem. | ALTO | 2-3 | P2 | Nenhuma |
-| SYS-005 | **API key exposure risk.** Gemini API key em `.env.local` plaintext. `list_models.ts` expoe key em query params. | ALTO | 2-3 | P0 | Nenhuma |
-| SYS-006 | **`.env` file tracked no repositorio.** Revela nomes de variaveis secretas esperadas. | MEDIO | 1 | P3 | Nenhuma |
-| SYS-NEW-001 | **Prompt security hardening.** Sem protecao contra persona escape ("ignore previous instructions"), indirect injection via knowledge base, ou system prompt leakage. Gap identificado por @qa. | ALTO | 4-6 | P1 | SYS-003 (input validation) |
+**Subtotal sistema:** 16 débitos — 0 🔴 · 5 🟠 · 8 🟡 · 3 🟢. **~42–43h.**
 
-#### Reliability
+### Tabela 2 — Débitos de Database (17)
 
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| SYS-007 | **Module-level crash on missing env var.** `gemini.ts` throws at import se `GEMINI_API_KEY` ausente, crashando todo o servidor. | ALTO | 2 | P1 | Nenhuma |
-| SYS-008 | **No error boundaries ou error pages.** Sem React Error Boundaries, sem `error.tsx`, sem `not-found.tsx`. | ALTO | 4-6 | P1 | UX-002 (componentes reusaveis) |
-| SYS-009 | **No loading states (`loading.tsx`).** Sem Suspense boundaries para async server components. | MEDIO | 2-3 | P2 | UX-002 (componentes) |
-| SYS-010 | **Gemini File URIs expiram em 48h sem mecanismo de renovacao.** Manifest armazena URIs stale indefinidamente. **Severidade elevada por @data-engineer:** URIs ja expiraram ha meses -- sistema 100% inoperante. | CRITICO | 6-8 | P0 | Fase 0 (workaround CLI), DATABASE SETUP (solucao permanente) |
-| SYS-011 | **No health check endpoint.** Sem `/api/health` ou equivalente. | MEDIO | 1-2 | P2 | Nenhuma |
+| ID | Débito | Severidade | Horas | Prioridade |
+|----|--------|-----------|-------|-----------|
+| **DB-5** | `file_uri_cache` sem UNIQUE em `knowledge_document_id`, mas scripts usam `ON CONFLICT (knowledge_document_id)` → upsert **aborta a transação**. Raiz estrutural do cache-miss não-recuperável. Requer dedupe ANTES do UNIQUE | 🔴 Critical | 1.5h | **P1** |
+| **DB-2** | `user_id` em 5 tabelas sem FK p/ `users` (zero integridade referencial). App já filtra por `userId`, mas DB não garante. Pré-requisito do Tema D | 🟠 High | 4h | **P1** |
+| **DB-3** | `local_path` em NFD (macOS) → mismatch em JOIN/`=` no **write-side** (read usa UUID, não `local_path`). Gatilho histórico do bug M1; já mitigado por script LIKE | 🟠 High | 3h | **P1** |
+| **DB-6** | Índices ausentes em FK/filtros quentes: `messages.conversation_id` (read mais quente), `conversations.user_id`, `conversations.mind_id`, `debates.user_id`, `knowledge_documents.mind_id`, `file_uri_cache.knowledge_document_id` (`mind_memories`/`token_usage`/`rate_limits` JÁ têm via 0002) | 🟠 High | 1.5h | **P2** |
+| **DB-1** | Sem RLS/authz no DB pós-Supabase — segurança 100% na app-layer. Gap de contrato (ADR), não bug | 🟠 High (analysis) | 3h | **P2** |
+| **DB-4** | `fix-m1-local-path.sql` escreve `updated_at` em `knowledge_documents` (coluna inexistente). **Script morto** já superado pelo de 16/03; `BEGIN/COMMIT` garantiu zero corrupção. Risco = trap futura se reusado como template | 🟡 Medium | 0.25h | **P1** |
+| **DB-7** | `conversations.share_token` sem índice → seq-scan em cada page-load de share. **Risco de colisão DESCARTADO** (`randomBytes(32)` = 256 bits). Só performance | 🟡 Medium | 0.5h | **P2** |
+| **DB-9** | Enums (`messages.role`, `mind_memories.memory_type`, `debates.status`) só na ORM, sem CHECK/pg enum. DB aceita qualquer texto via raw SQL | 🟡 Medium | 1.5h | **P3** |
+| **DB-10** | Sem auto-update de `updated_at` (sem triggers); app-mantido, pulado em writes raw | 🟡 Medium | 1.5h | **P3** |
+| **DB-12** | `rate_limits`/`token_usage` crescem ilimitadamente. `cleanupExpiredLimits()` **É chamado** mas é **fire-and-forget acoplado ao tráfego de chat** (não agendado, falha só logada → SYS-12). `token_usage` (billing) deve ser **arquivado**, não deletado. **Absorve DB-13** | 🟡 Medium | 2.5h | **P3** |
+| **DB-8** | Scripts `*.sql` ad-hoc mutam prod fora das migrations (DB-4/DB-5 são sintomas). **Bloqueado por SYS-10** | 🟡 Medium | 4h | **P3** |
+| **DB-15** | `debate_participants.mind_id` FK `ON DELETE no action` (RESTRICT default) enquanto `debate_id` é CASCADE — inconsistente. Deletar mind com participações fica bloqueado. Decisão consciente necessária | 🟡 Medium | 0.5h | **P3** |
+| **DB-11** | `token_usage.total_tokens` denormalizado (= input+output) sem CHECK | 🟢 Low | 0.5h | **P4** |
+| **DB-14** | `knowledge_documents` tem `local_path` E `storage_path` (morto pós-Supabase). **Zero reads confirmado** — drop aprovável após DB-16 + aprovação de governança | 🟢 Low | 1h | **P4** |
+| **DB-16** | `seed-db.ts:118-129` ainda popula `storage_path` (coluna morta). **Co-requisito de DB-14** (drop falha se seed continuar escrevendo) | 🟢 Low | 0.25h | **P4** |
+| **DB-17** | `messages.mind_slug` é `varchar` solto, sem FK p/ `minds.slug` nem índice — slug órfão possível se mind renomeado. `user_id`-sem-FK em miniatura | 🟢 Low | 0.5h | **P4** |
+| **DB-18** | Nenhum índice em `created_at` de `messages`/`conversations` p/ ordenação cronológica. Irrelevante em baixo volume; agrupar com DB-6 quando crescer | 🟢 Low | 0.5h | **P4** |
 
-#### Performance
+**Subtotal database:** 17 débitos — 1 🔴 · 4 🟠 · 7 🟡 · 4 🟢 (DB-1 é High analysis-only). **~26.75h.** *(DB-13 do DRAFT rejeitado: premissa de race incorreta — INSERT-append+SUM é design intencional; o crescimento ilimitado é DB-12.)*
 
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| SYS-012 | **Context window bloat.** 21 file URIs + historico crescente re-enviados a cada mensagem. Custo de tokens escala linearmente. | ALTO | 8-12 | P1 | SYS-021 (refactor gemini.ts) |
-| SYS-013 | **Stateless chat recreation.** Chat session recriado do zero em cada `sendMessage`. Zero reutilizacao de sessao. | ALTO | 6-8 | P1 | DATABASE SETUP (session store) |
-| SYS-014 | **Synchronous filesystem reads.** `readFileSync` em funcoes async (`gemini.ts:33,39`). Bloqueia event loop. **Nota @qa:** deve ser P1 se deploy em Vercel (serverless). | MEDIO | 1-2 | P1 | Nenhuma |
-| SYS-015 | **No response streaming.** Resposta completa aguardada antes de exibir ao usuario. 5-15s de espera sem feedback. **Combinado com UX-003.** | CRITICO | 12-16 | P0 | SYS-021 (refactor gemini.ts). **NAO depende de SYS-013** (ajuste @qa). |
-| SYS-016 | **No manifest caching.** `minds_manifest.json` re-lido do disco em cada request. | MEDIO | 2-3 | P2 | Nenhuma (resolvido automaticamente com DB) |
+### Tabela 3 — Débitos de Frontend/UX (16)
 
-#### Quality
+| ID | Débito | Severidade | Horas | Prioridade |
+|----|--------|-----------|-------|-----------|
+| **UX-2** | Tokens de design contornados por cores cruas (`text-gray-*`, `bg-purple-*`, `text-white`) em **45 arquivos** (27× `text-gray-400`, 28 arquivos `text-white`). Light-mode + 7 mind-themes inconsistentes. **Habilitador de UX-3** | 🟠 High | 20–28h | **P2** |
+| **UX-3** | Contraste WCAG AA não validado: `text-gray-400/500` + 7 mind-themes sem teste de ratio. `text-gray-500` sobre `card` escuro = candidato real a falha 4.5:1 | 🟠 High | 8–14h | **P2** |
+| **UX-1** | Soundscapes são placeholders (6 `.mp3` 75 B + 6 `.webm` 43 B) expostos na UI mas não-funcionais. **🟡 Medium SE feature-flagged** (toggle `enabled` já existe; default `false` resolve em ~1h). 🟠 High se must-fix | 🟡 Medium (flagged) | 1h (flag) / +6–10h áudio | **P4 flagged / P2 must-fix** |
+| **UX-4** | Claim VoiceOver/Lighthouse no `docs/accessibility.md` ≠ estado (QG2/QG3 pendentes). **Rebaixar o claim AA é P1 quick-win** (~1h), independente da validação real | 🟡 Medium | 1h + 6–10h (QG2/3) | **P3 (texto: P1)** |
+| **UX-5** | i18n hardcoded pt-BR + strings inline fora do `t()`. Espelho de SYS-13 (Tema G) | 🟡 Medium | 16–24h | **P3** |
+| **UX-11** | `chat-message.tsx` (556 LOC) e `chat-interface.tsx` (515 LOC) sobrecarregados. Pré-requisito natural de SYS-9 (testabilidade) | 🟡 Medium | 12–16h | **P3** |
+| **UX-7** | `metadataBase`/JSON-LD apontam para `vercel.app`, não domínio de prod (2× hardcoded em `layout.tsx:35,106`) | 🟡 Medium | 1–2h | **P3 quick-win** |
+| **UX-8** | Vercel Analytics + SpeedInsights carregam e falham fora da Vercel. Espelho de SYS-4 | 🟡 Medium | 1–2h | **P3 quick-win** |
+| **UX-15** | `docs/accessibility.md` **se autocontradiz**: lista "sem skip-link" como limitação (linha 199) mas o skip-link **existe e funciona**. Mistura claims superestimados (VoiceOver) e subestimados (skip-link). Mesma raiz de UX-4 | 🟡 Medium | 1–2h | **P3 quick-win (c/ UX-4)** |
+| **UX-9** | Gradiente do título triplicado (CSS `.text-gradient` + inline + Tailwind). Resolvido "de graça" dentro de UX-2 | 🟢 Low | 3–4h | **P4** |
+| **UX-10** | Ícones inconsistentes: onboarding usa SVG inline; resto usa lucide-react | 🟢 Low | 2–4h | **P4** |
+| **UX-6** | `themeColor` dourado (#c9a55a) destoa da primária roxa real | 🟢 Low | 0.5h | **P4** |
+| **UX-14** | `mind-card` usa `role="article"` em elemento clicável sem role de botão/link claro (clicabilidade vem do `<Link>` pai — role interno redundante) | 🟢 Low | 3–4h | **P4** |
+| **UX-16** | `SoundscapeEngine.isAvailable()` detecta só suporte a Web Audio API, **não** se o asset é real — placeholders de 75 B passam o guard, `play()` "tem sucesso" e nada toca, sem fallback de UI. Reforça por que UX-1 deve ser flag-off | 🟢 Low | 2–3h | **P4** |
+| **UX-13** | Baixa otimização desktop-wide (apenas 4× `lg:`). Melhoria, não débito puro — requer decisão de design wide | 🟢 Low | 6–8h | **P4** |
+| **UX-12** | SVGs órfãos do template Next.js em `public/` (vercel/next/window/globe/file) | 🟢 Low | 0.5h | **P4 quick-win** |
 
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| SYS-017 | **Zero test coverage.** Sem unit, integration, ou E2E tests. Sem test framework configurado. | ALTO | 12-16 | P2 | UX-002, SYS-021, SYS-018 |
-| SYS-018 | **`any` types throughout codebase.** `history: any[]`, `error: any`, manifest data typed as `any`. | MEDIO | 3-4 | P2 | Nenhuma |
-| SYS-019 | **Console.log em production code.** Debug logging em `actions.ts` e `ChatInterface.tsx`. | BAIXO | 1 | P3 | Nenhuma |
-| SYS-020 | **No code documentation.** Sem JSDoc, sem inline docs para logica complexa. | MEDIO | 3-4 | P3 | Nenhuma |
-| SYS-021 | **No separation of concerns em `gemini.ts`.** File reading, manifest parsing, model config, chat creation, e prompt engineering em 114 linhas. | MEDIO | 4-6 | P1 | Nenhuma |
-| SYS-022 | **Hardcoded model name e generation config.** `gemini-2.0-flash` e temperatura/topK/topP hardcoded. | MEDIO | 2-3 | P2 | Nenhuma |
-| SYS-023 | **Error message diz "Video processing failed."** Copy-paste do exemplo de video do Google. | BAIXO | 0.5 | P3 | Nenhuma |
-| SYS-NEW-002 | **Footer diz "Gemini 1.5 Pro" mas sistema usa "gemini-2.0-flash".** Inconsistencia de credibilidade. Gap identificado por @qa. | BAIXO | 0.25 | P0 (quick fix) | Nenhuma |
-
-#### Infrastructure
-
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| SYS-024 | **No CI/CD pipeline.** `.github/` tem apenas agent definitions, sem workflows. | ALTO | 6-8 | P2 | SYS-017 (tests) |
-| SYS-025 | **No monitoring ou observability.** Sem structured logging, error tracking, analytics, ou APM. | ALTO | 6-8 | P2 | DATABASE SETUP |
-| SYS-026 | **No Docker/containerization.** Sem Dockerfile, sem docker-compose. | MEDIO | 3-4 | P3 | Nenhuma |
-| SYS-027 | **No middleware.** Sem `middleware.ts`. Sem auth checks, rate limiting, CORS, ou request logging centralizados. | ALTO | 4-6 | P1 | Nenhuma |
-| SYS-028 | **Empty `next.config.ts`.** Sem security headers (CSP, HSTS, X-Frame-Options), sem image optimization. | MEDIO | 2-3 | P2 | Nenhuma |
-
----
-
-### Dados (validado por @data-engineer)
-
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| DB-001 | **Manifest JSON nao tem `expires_at` por arquivo.** `last_updated` existe no nivel da mente, nao por arquivo. Impossivel saber qual URI expirou sem consultar a API do Gemini. O script `ingest_mind.ts` nao captura `expirationTime` do Gemini. | CRITICO | 2-3 | P0 | Nenhuma |
-| DB-002 | **Nenhuma estrategia de backup da knowledge base.** Arquivos locais em `knowledge_base/` sao a unica copia. Re-criacao impossivel se perdidos. | ALTO | 2-3 | P1 | DATABASE SETUP (Supabase Storage) |
-| DB-003 | **Manifest JSON e single point of failure.** JSON corrompido derruba todo o catalogo. Sem validacao de integridade. | ALTO | 1-2 | P1 | Nenhuma (resolvido com DB) |
-| DB-004 | **Sem tracking de token usage por conversa/usuario.** `maxOutputTokens: 8192` configurado mas tokens usados nao registrados. Impossivel calcular custo ou detectar abuso. | MEDIO | 3-4 | P2 | DATABASE SETUP |
-| DB-005 | **Sem controle de concorrencia no manifest.** Race condition possivel entre `ingest_mind.ts` e server. | MEDIO | 1-2 | P2 | Nenhuma (resolvido com DB) |
-| DB-006 | **`localPath` no manifest usa caminhos com caracteres especiais.** Acentos, dois-pontos, aspas. Quebra em Windows e alguns filesystems. | MEDIO | 1-2 | P2 | Nenhuma |
-
----
-
-### Frontend/UX (validado por @ux-design-expert)
-
-#### Debitos Originais (com ajustes de severidade e esforco)
-
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| UX-001 | **No Design System / Token Architecture.** CSS custom properties declaradas mas nao usadas. Cores hardcoded via Tailwind. **Elevado por @ux-design-expert** (bloqueia theming, temas por mente). **@qa discorda de P0; mantido como P1 -- nao bloqueia o produto de funcionar.** | CRITICO | 10-14 | P1 | UX-010 (remover dead CSS), UX-011 (fix fonts) |
-| UX-002 | **Zero reusable components.** Todo UI e inline JSX. Apenas `ChatInterface` extraido como monolito. | ALTO | 12-16 | P1 | UX-001 (design tokens) |
-| UX-003 | **No streaming for chat responses.** 5-15s de silencio. Usuarios assumem app quebrado. **Elevado por @ux-design-expert para CRITICO.** Combinado com SYS-015. | CRITICO | (ver SYS-015) | P0 | SYS-021 (refactor gemini.ts) |
-| UX-004 | **Chat history nao persistido.** Messages em `useState`. Refresh perde tudo. **Elevado por @data-engineer para CRITICO.** | CRITICO | 6-8 | P0 | DATABASE SETUP |
-| UX-005 | **Accessibility failures.** Zero ARIA, zero live regions, zero form labels. Contrast failures (footer 2.7:1). | ALTO | 10-14 | P1 | UX-002 (componentes), UX-001 (tokens), UX-017 (lang) |
-| UX-006 | **"Base de Conhecimento" card non-functional.** Hover effects e cursor pointer sem funcionalidade. | MEDIO | 2-3 | P2 | Nenhuma |
-| UX-007 | **No `next/link` usage.** Navegacao via `<a>` tags. Full page reload. Flash branco contra #030014. **Elevado por @ux-design-expert para ALTO.** | ALTO | 1-2 | P1 | Nenhuma |
-| UX-008 | **Missing error boundaries.** Cross-reference com SYS-008. | MEDIO | (ver SYS-008) | P1 | Nenhuma |
-| UX-009 | **No loading/Suspense boundaries.** Cross-reference com SYS-009. | MEDIO | (ver SYS-009) | P2 | Nenhuma |
-| UX-010 | **Unused CSS module file.** `page.module.css` com 142 linhas nao importadas. | BAIXO | 0.25 | P0 (quick fix) | Nenhuma |
-| UX-011 | **Competing font declarations.** `globals.css` declara Inter, `layout.tsx` carrega Geist. Geist Mono carregado mas nao usado. | BAIXO | 0.5 | P3 | Nenhuma |
-| UX-012 | **Mobile viewport issues.** `h-[calc(100vh-140px)]` ignora mobile browser chrome. Touch targets < 44px. **Elevado por @ux-design-expert para ALTO.** | ALTO | 6-8 | P1 | UX-002 (componentes extraidos) |
-| UX-013 | **Missing empty states.** Sem ilustracoes, sem CTAs para novos usuarios. | MEDIO | 3-4 | P2 | UX-002 (componentes) |
-| UX-014 | **Missing production meta tags / SEO.** Sem Open Graph, Twitter Cards, canonical URL, structured data. | MEDIO | 2-3 | P2 | Nenhuma |
-| UX-015 | **Missing favicon / app icons.** Apenas SVGs scaffold do Next.js. | MEDIO | 2-3 | P2 | Nenhuma |
-| UX-016 | **No user feedback for chat actions.** Sem copy, timestamps, regenerate, edit. **Elevado por @ux-design-expert para ALTO.** | ALTO | 8-10 | P1 | UX-002 (componentes de chat) |
-| UX-017 | **`<html lang="en">` apesar de conteudo pt-BR.** Screen readers usam pronuncia inglesa. | MEDIO | 0.25 | P0 (quick fix) | Nenhuma |
-| UX-018 | **No chat textarea.** Single-line `<input type="text">`. Sem multi-line, sem Shift+Enter. **Elevado por @ux-design-expert para ALTO.** | ALTO | 3-4 | P1 | Nenhuma |
-| UX-019 | **Console.log em production code.** Cross-reference com SYS-019. | BAIXO | (ver SYS-019) | P3 | Nenhuma |
-| UX-020 | **`any` TypeScript usage em UI.** Cross-reference com SYS-018. | BAIXO | (ver SYS-018) | P3 | Nenhuma |
-| UX-021 | **No PWA / offline support.** Sem service worker, sem manifest.json. | BAIXO | 6-8 | P4 | Nenhuma |
-
-#### Debitos Adicionados por @ux-design-expert
-
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| UX-NEW-001 | **Sem avatares para mentes.** Mensagens do modelo sem identidade visual. Sem foto, icone, ou iniciais. | ALTO | 4-6 | P1 | UX-002 (ChatBubble component) |
-| UX-NEW-002 | **Sem indicacao de "quem esta falando" no header do chat.** Nome da mente sem subtitulo, expertise, bio, ou periodo historico. | ALTO | 3-4 | P1 | DATABASE SETUP (dados expandidos de minds) |
-| UX-NEW-003 | **Greeting message hardcoded e generica.** Toda mente recebe mesma saudacao. Nao reflete personalidade do pensador. | MEDIO | 2-3 | P2 | DATABASE SETUP (config por mente) |
-| UX-NEW-004 | **Sem transicao ou animacao de entrada para mensagens.** Aparecem instantaneamente sem fade/slide. | MEDIO | 2-3 | P2 | Framer Motion instalado |
-| UX-NEW-005 | **Sem indicador de "typing" contextualizado.** Loading generico de 3 bolinhas em vez de "{MindName} esta refletindo..." | BAIXO | 1-2 | P2 | Nenhuma |
-| UX-NEW-006 | **Sem onboarding ou tutorial.** Novos usuarios nao sabem o que o produto faz. | MEDIO | 4-6 | P2 | UX-002 (componentes) |
-| UX-NEW-007 | **Sem feedback haptico/sonoro ao enviar mensagem.** | BAIXO | 1-2 | P3 | Nenhuma |
-| UX-NEW-008 | **Scroll automatico intrusivo.** `scrollIntoView` executa em todo update, mesmo se usuario scrollou para cima. | MEDIO | 1-2 | P2 | UX-002 (MessageList component) |
+**Subtotal frontend/UX:** 16 débitos — 0 🔴 · 2 🟠 · 7 🟡 · 7 🟢. **~66–96h** (11–16 dias-dev a 6h/dia; exclui produção de áudio de UX-1 se must-fix).
 
 ---
 
-### Cross-Cutting (validado por @architect + @qa)
+## Matriz de Priorização Final
 
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| CROSS-001 | **No error handling strategy.** Server retorna `{ success: false, error: string }` generico. Client mostra "Falha na conexao neural." hardcoded. Sem classification, retry, ou reporting. | ALTO | 8-12 | P1 | SYS-008 (error boundaries), SYS-027 (middleware) |
-| CROSS-002 | **No auth + no persistence = no user identity.** Sem usuario, sem sessao, sem historico. Bloqueio fundamental para qualquer feature user-scoped. | CRITICO | 16-24 | P0 | SYS-001 (auth), DATABASE SETUP |
-| CROSS-003 | **Stateless architecture impede features core.** App reconstroi todo contexto em cada request. Afeta performance, reliability, e UX. | ALTO | 12-16 | P1 | DATABASE SETUP |
-| CROSS-004 | **No i18n infrastructure.** Strings hardcoded em portugues. `lang="en"` como sintoma. | MEDIO | 6-8 | P3 | Nenhuma |
-| CROSS-005 | **No observability pipeline.** `console.log` como unico logging. Sem structured logs, error tracking, ou metrics. | ALTO | 6-8 | P2 | DATABASE SETUP (ou servico externo) |
-| CROSS-006 | **Knowledge base management gap.** Ingestion CLI-only. File URIs expiram sem renovacao. Sem admin UI. Sistema quebra silenciosamente a cada 48h. | ALTO | 8-12 | P1 | SYS-010 (File URI), DATABASE SETUP, SYS-001 (auth p/ admin) |
+Tabela única ranqueada de todos os 49 débitos: severidade → impacto-em-prod → inversão de esforço (quick-wins críticos sobem). Tema entre {A..G}.
 
-### Gaps Adicionais (identificados por @qa)
+| Rank | ID | Débito (curto) | Área | Sev | Horas | Tema |
+|------|----|----------------|------|-----|-------|------|
+| 1 | DB-5 | `ON CONFLICT` sem UNIQUE → upsert aborta | DB | 🔴 | 1.5h | C/E |
+| 2 | DB-4 | Script escreve `updated_at` inexistente (morto) | DB | 🟡 | 0.25h | C |
+| 3 | SYS-15 | drizzle CVE SQL-inj + Next CVE multi; sem audit gate | Sys | 🟠 | 3–4h | — (security) |
+| 4 | DB-3 | `local_path` NFD → write-side mismatch | DB | 🟠 | 3h | E |
+| 5 | SYS-1 | File URI 48h dependente de cron externo (SPOF) | Sys | 🟠 | 6–8h | E |
+| 6 | SYS-10 | Migrations manuais via SSH, sem runner | Sys | 🟠 | 8–10h | B |
+| 7 | DB-2 | `user_id` sem FK em 5 tabelas | DB | 🟠 | 4h | C/D |
+| 8 | DB-6 | Índices ausentes em FK/filtros quentes | DB | 🟠 | 1.5h | C |
+| 9 | DB-1 | Sem authz no DB pós-Supabase (ADR) | DB | 🟠 | 3h | D |
+| 10 | SYS-2 | NextAuth pinado em beta no caminho crítico | Sys | 🟠 | 4–6h | — (security) |
+| 11 | SYS-9 | 5/56 componentes testados (4 a11y-only) | Sys | 🟠 | 12–16h | B |
+| 12 | UX-3 | Contraste WCAG AA não validado (cores + 7 themes) | UX | 🟠 | 8–14h | F |
+| 13 | UX-2 | Tokens contornados em 45 arquivos | UX | 🟠 | 20–28h | F |
+| 14 | SYS-16 | Sentry wired mas alerting não-validado; cron sem alarme | Sys | 🟡 | 3–4h | B |
+| 15 | DB-7 | `share_token` sem índice (seq-scan) | DB | 🟡 | 0.5h | C |
+| 16 | SYS-11 | Sem smoke pós-deploy; falta e2e debate + Gemini real | Sys | 🟡 | 4–6h | B |
+| 17 | UX-4 | Claim VoiceOver/Lighthouse ≠ estado (rebaixar já) | UX | 🟡 | 1h+ | F |
+| 18 | UX-15 | `accessibility.md` autocontradiz (skip-link) | UX | 🟡 | 1–2h | F |
+| 19 | DB-15 | `debate_participants.mind_id` RESTRICT vs CASCADE | DB | 🟡 | 0.5h | C |
+| 20 | SYS-14 | signup sem Zod (rota pública) + `@/db` direto; 3/11 validam | Sys | 🟡 | 2–3h | D |
+| 21 | SYS-3 | CI injeta secrets Supabase mortos | Sys | 🟡 | 0.5h | A |
+| 22 | SYS-4 | Vercel Analytics/SpeedInsights falham em prod | Sys | 🟡 | 1h | A |
+| 23 | UX-8 | Vercel Analytics falha (espelho UX de SYS-4) | UX | 🟡 | 1–2h | A |
+| 24 | UX-7 | `metadataBase`/JSON-LD → vercel.app | UX | 🟡 | 1–2h | A |
+| 25 | SYS-8 | `chat/route.ts` string-matching vs taxonomia | Sys | 🟡 | 1–2h | — |
+| 26 | SYS-7 | Dois SDKs Gemini coexistem | Sys | 🟡 | 3–4h | E |
+| 27 | SYS-5 | Validação de env parcial (só `GEMINI_*`) | Sys | 🟡 | 2–3h | G |
+| 28 | DB-9 | Enums só na ORM, sem CHECK | DB | 🟡 | 1.5h | C |
+| 29 | DB-8 | Scripts `*.sql` ad-hoc fora das migrations | DB | 🟡 | 4h | E |
+| 30 | DB-12 | `rate_limits`/`token_usage` crescem ilimitados (absorve DB-13) | DB | 🟡 | 2.5h | C |
+| 31 | DB-10 | Sem trigger de `updated_at` | DB | 🟡 | 1.5h | C |
+| 32 | UX-5 | i18n hardcoded + strings inline fora do `t()` | UX | 🟡 | 16–24h | G |
+| 33 | UX-11 | `chat-message`/`chat-interface` sobrecarregados | UX | 🟡 | 12–16h | F/B |
+| 34 | UX-1 | Soundscape placeholder (flag-off shippable) | UX | 🟡 | 1h+ | F |
+| 35 | SYS-12 | Side-effects fire-and-forget sem retry/DLQ | Sys | 🟢 | 4h | — |
+| 36 | SYS-13 | Strings PT-BR hardcoded (i18n bypass) | Sys | 🟢 | 3–4h | G |
+| 37 | SYS-6 | URLs/magic constants hardcoded | Sys | 🟢 | 1–2h | G |
+| 38 | DB-14 | `storage_path` morto pós-Supabase (drop) | DB | 🟢 | 1h | A |
+| 39 | DB-16 | seed escreve `storage_path` (co-req DB-14) | DB | 🟢 | 0.25h | A |
+| 40 | DB-11 | `total_tokens` denormalizado sem CHECK | DB | 🟢 | 0.5h | C |
+| 41 | DB-17 | `messages.mind_slug` sem FK/índice | DB | 🟢 | 0.5h | C |
+| 42 | DB-18 | Sem índice em `created_at` (ordering) | DB | 🟢 | 0.5h | C |
+| 43 | UX-9 | Gradiente de título triplicado | UX | 🟢 | 3–4h | F |
+| 44 | UX-10 | Ícones inline vs lucide-react | UX | 🟢 | 2–4h | F |
+| 45 | UX-16 | Engine de áudio sem guard de asset falso/decode | UX | 🟢 | 2–3h | F |
+| 46 | UX-6 | `themeColor` dourado destoa da primária | UX | 🟢 | 0.5h | A |
+| 47 | UX-14 | `mind-card` `role="article"` ambíguo | UX | 🟢 | 3–4h | F |
+| 48 | UX-13 | Baixa otimização desktop-wide | UX | 🟢 | 6–8h | — |
+| 49 | UX-12 | SVGs órfãos do template em `public/` | UX | 🟢 | 0.5h | A |
 
-| ID | Debito | Severidade | Horas | Prioridade | Dependencias |
-|----|--------|-----------|-------|------------|-------------|
-| CROSS-NEW-001 | **API cost management and tracking.** Sem quantificacao de custo por mensagem, projecao por usuario/mes, budget alerting, ou cost caps. | MEDIO | 4-6 | P2 | DB-004 (token tracking), DATABASE SETUP |
-| QA-GAP-001 | **Analise de licenciamento pendente.** Termos de servico do Gemini API para aplicacoes que "personificam" individuos reais nao verificados. Risco legal. | MEDIO | 2-3 | P2 (nota para @pm) | Nenhuma (analise juridica) |
-| QA-GAP-002 | **Ingestion script idempotencia nao verificada.** `ingest_mind.ts` pode criar duplicatas no Gemini File API ao re-executar. | ALTO | 1-2 | P0 (antes de re-ingestion) | Nenhuma |
+**Consolidado por severidade:** 🔴 **1** · 🟠 **11** · 🟡 **22** · 🟢 **15** = **49**.
 
----
-
-## Stack Tecnologica Recomendada (Consenso dos Especialistas)
-
-Todos os 4 especialistas convergem nas mesmas recomendacoes. Nenhuma contradicao entre as escolhas.
-
-| Tecnologia | Proposito | Consenso | Justificativa |
-|-----------|---------|----------|---------------|
-| **Supabase** | Database + Auth + Realtime + Storage + Edge Functions | Unanime | Auth built-in elimina CROSS-002. PostgreSQL para queries relacionais. Realtime para Multi-Mind Debates. Storage para backup de knowledge base. Edge Functions para cron de File URI refresh. Free tier generoso (500MB DB, 1GB Storage, 50K auth users). |
-| **Drizzle ORM** | Type-safe database access | @data-engineer recomenda, @qa concorda | 7KB bundle (vs 200KB+ Prisma) -- critico para serverless. SQL-like syntax. Schema-as-code. Performance superior em Vercel. **Ressalva @qa:** ecossistema menor que Prisma; se equipe conhece Prisma, bundle overhead e aceitavel. |
-| **shadcn/ui** | Component library foundation | @ux-design-expert recomenda, @qa concorda fortemente | Radix UI primitives (a11y built-in). Tailwind nativo (ja e o stack). Copy-paste model (customizacao total). CSS variables para theming (alinha com temas por mente). Dark mode built-in. |
-| **Vercel** | Hosting + CI/CD | Unanime | Native Next.js support. Edge functions. Preview deployments por PR. Analytics integrado. |
-| **Vercel AI SDK** | Streaming + AI utilities | @architect + @ux-design-expert | Token-by-token streaming. Multi-model support. useChat hook para React. |
-| **Vitest** | Unit + Integration testing | @qa recomenda | ESM-native, rapido, compativel com Next.js. Superior a Jest para projetos modernos. |
-| **Playwright** | E2E testing | @qa recomenda | Melhor suporte Next.js. Multi-browser. Screenshots. |
-| **Zod** | Schema validation | @architect recomenda | Input validation (SYS-003). Type-safe forms. Manifest validation (DB-003). |
-| **Sentry** | Error tracking | @architect recomenda | Production observability (SYS-025). Free tier generoso. |
-| **Framer Motion** | Animations | @ux-design-expert recomenda | Message animations, page transitions, mind themes. |
-
-**Alternativas descartadas (com justificativa):**
-
-| Tecnologia | Descartada por | Motivo |
-|-----------|---------------|--------|
-| Firebase/Firestore | @data-engineer | NoSQL dificulta queries analiticas. Vendor lock-in forte. Sem SQL. |
-| PlanetScale | @data-engineer | Nao bundla auth/storage/realtime. Mais moving parts. |
-| Prisma | @data-engineer | Bundle 200KB+ problematico para serverless. Requer connection pooler com Supabase. |
-| SQLite | @data-engineer | Sem auth, sem realtime, sem RLS. Nao escala para multi-usuario. |
-| Custom design system (from scratch) | @ux-design-expert | 40+ horas so para a11y. shadcn/ui entrega equivalente em 2-3h. |
-
----
-
-## Matriz de Priorizacao Final
-
-Ordenada por: CRITICO > ALTO > MEDIO > BAIXO, depois por ratio impacto/esforco.
-
-### P0 -- Critico / Imediato
-
-| # | ID | Debito | Area | Severidade | Horas | Fase |
-|---|-----|--------|------|-----------|-------|------|
-| 1 | (Fase 0) | Re-ingestion de File URIs + quick fixes | Recovery | CRITICO | 2.5-3.5 | 0 |
-| 2 | SYS-NEW-002 | Footer diz "Gemini 1.5 Pro" (usa 2.0-flash) | Quality | BAIXO | 0.25 | 0 |
-| 3 | UX-017 | `lang="en"` -> `lang="pt-BR"` | UX/A11y | MEDIO | 0.25 | 0 |
-| 4 | UX-010 | Deletar `page.module.css` (dead code) | UX | BAIXO | 0.25 | 0 |
-| 5 | QA-GAP-002 | Validar idempotencia de `ingest_mind.ts` | Quality | ALTO | 1-2 | 0 |
-| 6 | DB-001 | Manifest sem `expires_at` por arquivo | Data | CRITICO | 2-3 | 0/1 |
-| 7 | SYS-010 | File URIs expiram sem renovacao | Reliability | CRITICO | 6-8 | 1 |
-| 8 | CROSS-002 | No auth + no persistence | Cross | CRITICO | 16-24 | 2 |
-| 9 | SYS-001 | No authentication | Security | CRITICO | 12-16 | 2 |
-| 10 | SYS-002 | No rate limiting | Security | CRITICO | 6-8 | 2 |
-| 11 | SYS-003 | No input validation | Security | CRITICO | 4-6 | 2 |
-| 12 | SYS-015/UX-003 | No response streaming | Perf/UX | CRITICO | 12-16 | 3 |
-| 13 | UX-004 | Chat history nao persistido | UX/Data | CRITICO | 6-8 | 2 |
-
-### P1 -- Alto / Semana 1-6
-
-| # | ID | Debito | Area | Severidade | Horas | Fase |
-|---|-----|--------|------|-----------|-------|------|
-| 14 | SYS-005 | API key exposure risk | Security | ALTO | 2-3 | 1 |
-| 15 | SYS-007 | Module-level crash on missing env | Reliability | ALTO | 2 | 1 |
-| 16 | SYS-027 | No middleware | Infra | ALTO | 4-6 | 2 |
-| 17 | SYS-008 | No error boundaries | Reliability | ALTO | 4-6 | 3 |
-| 18 | SYS-021 | No separation of concerns (gemini.ts) | Quality | MEDIO | 4-6 | 3 |
-| 19 | SYS-012 | Context window bloat | Performance | ALTO | 8-12 | 3 |
-| 20 | SYS-013 | Stateless chat recreation | Performance | ALTO | 6-8 | 2 |
-| 21 | SYS-014 | Synchronous filesystem reads | Performance | MEDIO | 1-2 | 1 |
-| 22 | SYS-NEW-001 | Prompt security hardening | Security | ALTO | 4-6 | 2 |
-| 23 | CROSS-001 | No error handling strategy | Cross | ALTO | 8-12 | 3 |
-| 24 | CROSS-003 | Stateless architecture | Cross | ALTO | 12-16 | 2 |
-| 25 | CROSS-006 | Knowledge base management gap | Cross | ALTO | 8-12 | 2 |
-| 26 | DB-002 | Sem backup da knowledge base | Data | ALTO | 2-3 | 2 |
-| 27 | DB-003 | Manifest JSON single point of failure | Data | ALTO | 1-2 | 2 |
-| 28 | UX-001 | No Design System / tokens | UX | CRITICO | 10-14 | 3 |
-| 29 | UX-002 | Zero reusable components | UX | ALTO | 12-16 | 3 |
-| 30 | UX-005 | Accessibility failures | UX | ALTO | 10-14 | 4 |
-| 31 | UX-007 | No next/link usage | UX | ALTO | 1-2 | 1 |
-| 32 | UX-012 | Mobile viewport issues | UX | ALTO | 6-8 | 4 |
-| 33 | UX-016 | No chat action feedback | UX | ALTO | 8-10 | 3 |
-| 34 | UX-018 | No chat textarea | UX | ALTO | 3-4 | 3 |
-| 35 | UX-NEW-001 | Sem avatares para mentes | UX | ALTO | 4-6 | 3 |
-| 36 | UX-NEW-002 | Sem contexto no header do chat | UX | ALTO | 3-4 | 3 |
-
-### P2 -- Medio / Semana 4-8
-
-| # | ID | Debito | Area | Severidade | Horas | Fase |
-|---|-----|--------|------|-----------|-------|------|
-| 37 | SYS-004 | No mindId sanitization | Security | ALTO | 2-3 | 2 |
-| 38 | SYS-009 | No loading states | Reliability | MEDIO | 2-3 | 4 |
-| 39 | SYS-011 | No health check endpoint | Reliability | MEDIO | 1-2 | 2 |
-| 40 | SYS-016 | No manifest caching | Performance | MEDIO | 2-3 | 2 |
-| 41 | SYS-017 | Zero test coverage | Quality | ALTO | 12-16 | 4 |
-| 42 | SYS-018 | `any` types throughout | Quality | MEDIO | 3-4 | 3 |
-| 43 | SYS-022 | Hardcoded model/config | Quality | MEDIO | 2-3 | 3 |
-| 44 | SYS-024 | No CI/CD pipeline | Infra | ALTO | 6-8 | 4 |
-| 45 | SYS-025 | No monitoring/observability | Infra | ALTO | 6-8 | 4 |
-| 46 | SYS-028 | Empty next.config.ts | Infra | MEDIO | 2-3 | 2 |
-| 47 | CROSS-005 | No observability pipeline | Cross | ALTO | 6-8 | 4 |
-| 48 | CROSS-NEW-001 | API cost management | Cross | MEDIO | 4-6 | 4 |
-| 49 | DB-004 | Sem tracking de token usage | Data | MEDIO | 3-4 | 4 |
-| 50 | DB-005 | Sem controle de concorrencia | Data | MEDIO | 1-2 | 2 |
-| 51 | DB-006 | localPath com caracteres especiais | Data | MEDIO | 1-2 | 2 |
-| 52 | UX-006 | KB card non-functional | UX | MEDIO | 2-3 | 3 |
-| 53 | UX-013 | Missing empty states | UX | MEDIO | 3-4 | 5 |
-| 54 | UX-014 | Missing meta tags / SEO | UX | MEDIO | 2-3 | 5 |
-| 55 | UX-015 | Missing favicon / app icons | UX | MEDIO | 2-3 | 5 |
-| 56 | UX-NEW-003 | Greeting hardcoded | UX | MEDIO | 2-3 | 4 |
-| 57 | UX-NEW-004 | Sem animacao de mensagens | UX | MEDIO | 2-3 | 3 |
-| 58 | UX-NEW-005 | Typing indicator generico | UX | BAIXO | 1-2 | 3 |
-| 59 | UX-NEW-006 | Sem onboarding | UX | MEDIO | 4-6 | 5 |
-| 60 | UX-NEW-008 | Scroll automatico intrusivo | UX | MEDIO | 1-2 | 3 |
-| 61 | QA-GAP-001 | Licenciamento Gemini API | Legal | MEDIO | 2-3 | 4 |
-
-### P3 -- Baixo / Semana 8-12+
-
-| # | ID | Debito | Area | Severidade | Horas | Fase |
-|---|-----|--------|------|-----------|-------|------|
-| 62 | SYS-006 | `.env` tracked no repo | Security | MEDIO | 1 | 5 |
-| 63 | SYS-019 | Console.log em production | Quality | BAIXO | 1 | 0 |
-| 64 | SYS-020 | No code documentation | Quality | MEDIO | 3-4 | 5 |
-| 65 | SYS-023 | Wrong error message in script | Quality | BAIXO | 0.5 | 5 |
-| 66 | SYS-026 | No Docker/containerization | Infra | MEDIO | 3-4 | 5 |
-| 67 | CROSS-004 | No i18n infrastructure | Cross | MEDIO | 6-8 | 5 |
-| 68 | UX-011 | Competing font declarations | UX | BAIXO | 0.5 | 5 |
-| 69 | UX-NEW-007 | Sem feedback haptico/sonoro | UX | BAIXO | 1-2 | 5 |
-
-### P4 -- Futuro
-
-| # | ID | Debito | Area | Severidade | Horas |
-|---|-----|--------|------|-----------|-------|
-| 70 | UX-021 | No PWA / offline support | UX | BAIXO | 6-8 |
+| Severidade | Sistema | DB | UX | Total |
+|------------|---------|-----|-----|-------|
+| 🔴 Critical | 0 | 1 | 0 | **1** |
+| 🟠 High | 5 | 4 | 2 | **11** |
+| 🟡 Medium | 8 | 7 | 7 | **22** |
+| 🟢 Low | 3 | 4 | 7 | **15** |
+| **Total** | **16** | **17** | **16** | **49** |
 
 ---
 
-## Plano de Resolucao por Fases
+## Cross-Cutting Themes (final, 7 temas)
 
-### Fase 0: Recuperacao Imediata (2.5-3.5 horas)
+Agrupamento de débitos que são **facetas de uma mesma raiz**. Resolver por tema (uma remediação coordenada) é mais barato e seguro do que item a item. As adições da Fase 7 foram dobradas nos temas existentes; segurança de dependências (SYS-15) é o único item que permanece **transversal a vários temas** (não é um tema próprio — é um pré-requisito de segurança do Tema C).
 
-**Objetivo:** Restaurar o sistema a um estado funcional.
+### Tema A — Limpeza pós-migração Supabase/Vercel incompleta
+**Membros:** SYS-3, SYS-4, DB-14, DB-16, UX-6, UX-7, UX-8, UX-12.
+**Raiz:** A remoção do Supabase (`aa0dade`) e a não-adoção da Vercel deixaram referências mortas em CI (secrets Supabase), runtime (Vercel Analytics), DB (`storage_path` + seed que ainda o escreve), metadados (URLs `vercel.app`) e assets (SVGs órfãos, themeColor antigo).
+**Remediação única:** um PR "post-migration cleanup" / "PR de higiene": remover secrets Supabase (SYS-3), deps+tags Vercel (SYS-4/UX-8), corrigir `metadataBase`/JSON-LD (UX-7), `themeColor` roxo (UX-6), deletar SVGs órfãos (UX-12), remover escrita de `storage_path` no seed (DB-16) e dropar a coluna (DB-14, requer aprovação de drop). Todos S/XS — risco baixo, alto sinal de higiene.
 
-**Debitos resolvidos:** SYS-010 (workaround), QA-GAP-002, UX-017, UX-010, SYS-019 (console.logs), SYS-NEW-002
-**Dependencias:** Nenhuma.
+### Tema B — Lacuna de testes, automação de deploy & observabilidade
+**Membros:** SYS-9, SYS-10, SYS-11, SYS-16, UX-11 (testabilidade).
+**Raiz:** O pipeline confia em verificação manual. Não há rede de segurança automatizada na **entrada** (testes de componente — 5/56), na **saída** (migração automática + smoke pós-deploy, hoje só `GET /`), nem na **operação** (Sentry wired mas alerting não-validado; cron SPOF sem alarme). Mesma assinatura: ausência de gates/alertas automatizados.
+**Remediação única:** épico "deploy & operação confiáveis": (1) runner de migração gated no deploy com suporte a `CONCURRENTLY`/`NOT VALID`/`pg_dump`/rollback (SYS-10), (2) smoke `/api/health` + `/api/chat` com **resposta Gemini real** + e2e de debate (SYS-11), (3) testes de **lógica** (não só a11y) para `chat-interface`/`debate-interface`/`conversation-drawer` (SYS-9, habilitado por refactor UX-11), (4) alerting Sentry no cron + revisão de cobertura de breadcrumbs/on-call (SYS-16). SYS-10/SYS-11 são pré-requisito do Tema C.
 
-| Tarefa | Horas | Entrega |
-|--------|-------|---------|
-| Validar idempotencia de `ingest_mind.ts` | 0.5 | Confirmacao de seguranca |
-| Re-ingestion via CLI | 1-2 | File URIs atualizados, chat funcional |
-| Quick fixes (lang, dead CSS, console.logs, footer) | 0.75 | Limpeza basica |
-| Smoke test | 0.5 | Confirmacao que chat funciona |
+### Tema C — Integridade de dados / camada de persistência
+**Membros:** DB-2, DB-4, DB-5, DB-6, DB-7, DB-9, DB-10, DB-11, DB-12, DB-15, DB-17, DB-18.
+**Raiz:** O schema foi gerado pela ORM com foco no caminho feliz; faltam as garantias que o DB deveria impor — FKs, UNIQUEs, índices, CHECKs e triggers. Daí: upsert que aborta (DB-5), scans (DB-6/DB-7/DB-18), ausência de integridade referencial (DB-2/DB-17), enums não-impostos (DB-9), drift de `updated_at` (DB-10) e crescimento ilimitado (DB-12).
+**Remediação única:** uma migração consolidada de "hardening de schema", aplicada **via o runner automatizado do Tema B** (nunca por script ad-hoc — ver Tema E). **Pré-requisito de segurança: SYS-15 (bump drizzle-orm ^0.45.2) ANTES de escrever estas migrations.** Ordem segura: dedupe/audit de órfãos → UNIQUE `file_uri_cache` (DB-5) → índices `CONCURRENTLY` (DB-6) → FKs `NOT VALID`+`VALIDATE` com política por tabela (DB-2/DB-15) → CHECKs (DB-9/DB-11) → triggers (DB-10) → retenção (DB-12). **Não aplicável com segurança enquanto SYS-10 não existir.**
 
-**Entregaveis:** Sistema funcional novamente. Chat responde. Quick fixes aplicados.
+### Tema D — Segurança como contrato app-only (pós-RLS)
+**Membros:** DB-1, DB-2, SYS-14.
+**Raiz:** Com Supabase/RLS removido, a autorização vive 100% na camada de serviço. Isso só é defensável se (a) a app é o único gatekeeper e (b) o DB garante integridade referencial — hoje nenhuma é blindada. `user_id` sem FK (DB-2) significa que nem o app pode confiar que o `user_id` é real; o signup (SYS-14) fura a camada service **e** valida input à mão numa rota pública não-autenticada.
+**Remediação única:** formalizar o contrato "app-is-the-only-gatekeeper": ADR explícito (DB-1), FKs com política por tabela (DB-2, ver Riscos), e canalizar signup por um `users` service único **com Zod schema** (SYS-14) — toda escrita pelo mesmo portão validado, integridade garantida nas duas pontas.
 
----
+### Tema E — Pipeline de conhecimento Gemini frágil
+**Membros:** SYS-1, SYS-7, DB-3, DB-5, DB-8.
+**Raiz:** O subsistema RAG/knowledge (ingest → cache de File URI → injeção no prompt) é o ponto mais frágil do produto: URIs expiram em ~48h e dependem de cron externo SPOF sem alarme (SYS-1 + SYS-16), o cache quebra por encoding NFD no write-side (DB-3) e por upsert inválido (DB-5), e a manutenção é por SQL hand-edited fora das migrations (DB-8). Dois SDKs Gemini (SYS-7) ampliam a superfície.
+**Remediação única:** redesenhar o pipeline para **auto-cura**: re-upload sob demanda na expiração (elimina a dependência do cron — SYS-1), normalizar `local_path` para NFC no ingest + backfill (DB-3), UNIQUE em `file_uri_cache` para o upsert funcionar (DB-5), mover o refresh para script Drizzle versionado (DB-8) e unificar no AI SDK dropando o legacy (SYS-7). Alerting Sentry no cron (SYS-16) cobre o período de transição.
 
-### Fase 1: Quick Wins + Seguranca Basica (22-32 horas, semana 1-2)
+### Tema F — Design system contornado
+**Membros:** UX-1, UX-2, UX-3, UX-4, UX-9, UX-10, UX-14, UX-15, UX-16.
+**Raiz:** Existe um design system de tokens sólido em `globals.css`, mas o código o **contorna** com cores cruas em 45 arquivos. Ramifica em: mind-themes/light-mode inconsistentes (UX-2), contraste WCAG não-validável (UX-3), gradiente triplicado (UX-9), ícones inconsistentes (UX-10). Doc de a11y desalinhado nos dois sentidos (UX-4 superestima, UX-15 subestima) e features expostas mas não-exercidas (UX-1 soundscape + UX-16 engine sem guard) compartilham a assinatura "a infra existe, o código a contorna/não a exercita".
+**Remediação única:** campanha de "token adoption" com guard de CI anti-regressão: mapa cor-crua→token semântico, migração das 45 ocorrências (UX-2) — o que **habilita** a validação automatizada de contraste das 7 paletas (UX-3) e mata UX-9/UX-10/UX-14. Reconciliar o doc de a11y (UX-4+UX-15) é quick-win paralelo. UX-1 flag-off + guard de byteLength no engine (UX-16) tornam o soundscape honesto até existir áudio real.
 
-**Objetivo:** Eliminar vulnerabilidades criticas e aplicar melhorias rapidas de UX.
+### Tema G — Drift de configuração & env
+**Membros:** SYS-5, SYS-6, SYS-13, UX-5.
+**Raiz:** Configuração e strings localizáveis não estão centralizadas: env só parcialmente validado (SYS-5), magic constants/URLs hardcoded (SYS-6) e strings PT-BR inline contornando o módulo i18n existente no backend (SYS-13) e frontend (UX-5). Mesma assinatura do Tema F: "a infra existe, o código a contorna".
+**Remediação única:** centralizar — schema Zod único cobrindo todo env obrigatório com fail-fast no boot (SYS-5), externalizar magic constants (SYS-6) e rotear todas as strings pelo `t()`/i18n (SYS-13 + UX-5) antes que a base cresça.
 
-**Debitos resolvidos:** SYS-005, SYS-007, SYS-014, UX-007, DB-001, SYS-027, SYS-001, SYS-002, SYS-003, SYS-004
-**Dependencias:** Fase 0 concluida.
-
-| Tarefa | Horas | Dependencias | Entrega |
-|--------|-------|-------------|---------|
-| Fix API key exposure (env var management) | 2-3 | Nenhuma | Key segura |
-| Graceful env var handling (SYS-007) | 2 | Nenhuma | Sem crash on missing env |
-| Async filesystem reads (SYS-014) | 1-2 | Nenhuma | Event loop desbloqueado |
-| Substituir `<a>` por `next/link` (UX-007) | 1-2 | Nenhuma | Sem flash branco |
-| Capturar `expirationTime` no ingest script (DB-001) | 2-3 | Nenhuma | TTL tracking funcional |
-| Criar `middleware.ts` (SYS-027) | 4-6 | Nenhuma | Base para auth + rate limit |
-| Implementar autenticacao (SYS-001) | 12-16 | SYS-027 | Usuarios identificados |
-| Rate limiting (SYS-002) | 6-8 | SYS-027 | Protecao contra abuso |
-| Input validation com Zod (SYS-003) | 4-6 | Nenhuma | Validacao de mensagens |
-| mindId sanitization (SYS-004) | 2-3 | Nenhuma | Path traversal prevenido |
-
-**Nota:** Auth e rate limiting podem iniciar com in-memory e migrar para DB na Fase 2.
-
-**Entregaveis:** App protegida com autenticacao, rate limiting, e input validation.
+> **Itens fora de tema (standalone):** SYS-8 (taxonomia de erro no chat), SYS-12 (retry/DLQ de side-effects), UX-13 (otimização desktop-wide — melhoria, não débito), SYS-15/SYS-2 (segurança — pré-requisitos transversais, não tema). Resolvidos oportunisticamente dentro das waves adjacentes.
 
 ---
 
-### Fase 2: Fundacao de Dados (32-48 horas, semana 2-4)
+## Plano de Resolução (waves ordenadas, com dependências não-negociáveis)
 
-**Objetivo:** Estabelecer persistencia, migrar manifest para DB, implementar cron de File URI refresh.
+O sequenciamento respeita **três ordens não-negociáveis** (todas confirmadas pelo QA-gate Fase 7):
+1. **SYS-15 (bump drizzle-orm) ANTES de escrever as migrations do Tema C** — não re-gerar SQL sob versão com CVE de SQL-injection.
+2. **SYS-10 + SYS-11 (runner + smoke) ANTES de qualquer DDL do Tema C** — não aplicar FK/UNIQUE/índice em prod viva via psql manual.
+3. **DB-5 ANTES de DB-3** para recuperação de cache — DB-5 destrava o upsert; o read-side usa UUID, não `local_path`.
 
-**Debitos resolvidos:** CROSS-002, CROSS-003, UX-004, SYS-010 (permanente), SYS-013, SYS-NEW-001, CROSS-006, DB-002, DB-003, DB-005, DB-006, SYS-011, SYS-016, SYS-028
-**Dependencias:** Fase 1 (auth) concluida.
+### Wave 0 — Quick-wins de código/script (NÃO-DDL, sem dependências) · ~6–8h
+Edições de código/script/doc que não tocam o schema de prod. Podem ir imediatamente, em paralelo.
+- **DB-4** (remover `, updated_at = NOW()` do script morto / arquivá-lo)
+- **DB-3 (parte código)** — NFC no ingest + backfill via script LIKE já existente; **audit read-only de órfãos (DB-2) e duplicatas (DB-5)** como gate de diagnóstico
+- **UX-1 flag-off** (default `enabled=false` + gate de env `NEXT_PUBLIC_SOUNDSCAPES_ENABLED`)
+- **UX-4 + UX-15** (rebaixar claim AA → "AA-targeted, validation pending" + corrigir contradição do skip-link)
+- **SYS-3/SYS-4** (remover config morta Supabase/Vercel — parte não-DDL)
+**Racional:** remove a "vergonha visível" (promessa quebrada, claim falso) + destrava diagnóstico de dados, zero risco de prod.
 
-| Tarefa | Horas | Dependencias | Entrega |
-|--------|-------|-------------|---------|
-| Setup Supabase project + connection | 1-2 | Nenhuma | DB operacional |
-| Schema creation (migrations) | 3-4 | Setup | Tabelas criadas |
-| Drizzle ORM setup + schema types | 2-3 | Schema | Type-safe DB access |
-| RLS policies + testing | 3-4 | Schema | Seguranca no DB |
-| Seed script (manifest -> DB, idempotente) | 2-3 | Schema + Drizzle | Minds no DB |
-| Upload originais para Supabase Storage | 1-2 | Setup | Backup duravel |
-| File refresh Edge Function (cron 12h) | 4-6 | Schema + Gemini | URIs auto-renovados |
-| Supabase Auth integration (Next.js) | 4-6 | Setup | Login/logout funcional |
-| Prompt security hardening (SYS-NEW-001) | 4-6 | SYS-003 | Persona escape prevented |
-| Conversation persistence (CRUD) | 4-6 | Schema + Auth | Chat sobrevive refresh |
-| Refactor rate limiting para DB-backed | 2-3 | Schema | Limites persistentes |
-| Health check endpoint (SYS-011) | 1-2 | Nenhuma | Liveness probe |
-| Security headers em next.config (SYS-028) | 2-3 | Nenhuma | CSP, HSTS, X-Frame |
-| Dual-read transition + manifest removal | 2-3 | Tudo acima | DB e source-of-truth |
+### Wave 1 — Segurança de dependências (SECURITY, antes de qualquer migration) · ~7–10h
+- **SYS-15** — bump `drizzle-orm ^0.45.2` (CVE SQL-injection) + `next` patched (middleware/CSP/DoS) + transitivas; adicionar `npm audit` gate no CI (build falha em HIGH não-waived).
+- **SYS-2** — reavaliar NextAuth beta como passada coordenada de "atualização do caminho de auth" junto com o bump do Next; testar o middleware (runtime nodejs) com o teste de integração existente.
+**Racional não-negociável:** o ORM e o framework do caminho crítico têm CVEs HIGH. Subir o Drizzle **antes** de escrever as migrations de hardening evita re-gerar SQL sob versão vulnerável.
 
-**Paralelizavel com Fase 3 (frontend):** DATABASE (backend) e DESIGN SYSTEM (frontend) sao independentes.
+### Wave 2 — Habilitador de infra (runner + smoke), antes do hardening · ~12–16h
+- **SYS-10** — runner de migração gated no deploy, com suporte a statements fora de transação (`CONCURRENTLY`), `NOT VALID`/`VALIDATE`, `pg_dump` pré-migração e rollback step-by-step (critério de aceite, não detalhe).
+- **SYS-11** — smoke pós-deploy: `GET /api/health` (DB+auth) **E** `/api/chat` com resposta Gemini real; e2e de debate.
+- **SYS-16** — alerting Sentry no cron de URI (cron failure ≠ silencioso) + revisão de cobertura.
+**Racional não-negociável:** nenhum DDL do Tema C antes desta wave. Sem runner versionado, todo hardening reintroduz o anti-padrão que gerou DB-4/DB-5/DB-8.
 
-**Entregaveis:** Usuarios com login, conversas persistidas, File URIs renovando automaticamente, knowledge base com backup.
+### Wave 3 — Tema C: hardening de schema (via runner) · ~13–15h
+Ordem interna segura (dedupe/audit já feito na Wave 0):
+1. **DB-5** — dedupe → `CREATE UNIQUE INDEX CONCURRENTLY file_uri_cache(knowledge_document_id)` → **destrava o cache Gemini** (🔴 resolvido).
+2. **DB-6 / DB-18** — índices em FK/filtros quentes via `CONCURRENTLY`.
+3. **DB-2 / DB-15 / DB-17** — FKs `NOT VALID`+`VALIDATE` com **política por tabela** (CASCADE em conversations/mind_memories/debates/rate_limits; **SET NULL/RESTRICT em `token_usage`** para preservar billing; decisão explícita de RESTRICT em `debate_participants.mind_id`).
+4. **DB-9 / DB-11** — CHECKs. **DB-10** — triggers `BEFORE UPDATE`. **DB-7** — índice em `share_token`. **DB-12** — job de retenção (archive p/ `token_usage`).
+**Racional:** Tema C completo, rodando pelo runner da Wave 2, com `pg_dump` antes de qualquer passo destrutivo.
 
----
+### Wave 4 — Tema E (pipeline Gemini auto-cura) + Tema D (contrato app-only) · ~12–15h
+- **Tema E:** SYS-1 (re-upload self-healing — elimina dependência do cron), DB-8 (refresh em script Drizzle versionado), SYS-7 (unificar no AI SDK).
+- **Tema D:** DB-1 (ADR app-only gatekeeper), SYS-14 (signup via `users` service + Zod schema). DB-2 já blindou a integridade na Wave 3.
+**Racional:** com FKs e cache destravados, fechar o pipeline de knowledge e o contrato de segurança nas duas pontas (escrita validada + integridade referencial).
 
-### Fase 3: Core UX + Chat Experience (40-56 horas, semana 4-6)
-
-**Objetivo:** Transformar o chat de prototipo para experiencia moderna. Design system, streaming, componentes.
-
-**Debitos resolvidos:** UX-001, UX-002, SYS-015/UX-003, SYS-021, SYS-012, SYS-008, SYS-018, SYS-022, CROSS-001, UX-016, UX-018, UX-NEW-001, UX-NEW-002, UX-006, UX-NEW-004, UX-NEW-005, UX-NEW-008
-**Dependencias:** Fase 1 parcialmente concluida (nao depende de DB para iniciar).
-
-| Tarefa | Horas | Dependencias | Entrega |
-|--------|-------|-------------|---------|
-| Design tokens em `tailwind.config.ts` | 4-6 | Quick wins | Fundacao de design |
-| Instalar e configurar shadcn/ui | 2-3 | Tokens | Componentes acessiveis |
-| Extrair componentes base (Button, GlassCard, PageLayout, Header) | 4-6 | shadcn/ui | Reusabilidade |
-| Extrair componentes de chat (ChatBubble, MessageList, ChatInput com textarea auto-resize) | 6-8 | Componentes base | Chat modular |
-| Refactor gemini.ts em modulos (SYS-021) | 4-6 | Nenhuma | Testabilidade |
-| Implementar streaming (Vercel AI SDK) | 12-16 | SYS-021 | Token-by-token display |
-| Context window optimization (SYS-012) -- Gemini Cached Content API | 8-12 | SYS-021 | Latencia reduzida |
-| Error boundaries + error/not-found pages | 4-6 | Componentes | Recovery graceful |
-| Error handling strategy (CROSS-001) | 8-12 | Error boundaries | Erros classificados |
-| Fix `any` types (SYS-018) | 3-4 | Refactor | Type safety |
-| Model config externalization (SYS-022) | 2-3 | Refactor | A/B testable |
-| Chat actions: copy, regenerate, timestamps (UX-016) | 3-4 | ChatBubble | Interatividade |
-| Avatares para mentes (UX-NEW-001) | 3-4 | ChatBubble | Identidade visual |
-| Chat header com contexto (UX-NEW-002) | 2-3 | DB minds data | Contexto |
-| Message animations (UX-NEW-004) | 2-3 | Framer Motion | Polimento |
-| Typing indicator contextualizado (UX-NEW-005) | 1 | Nenhuma | Imersao |
-| Fix auto-scroll (UX-NEW-008) | 1-2 | MessageList | UX correto |
-| KB card funcional ou remover interatividade (UX-006) | 2-3 | Componentes | UI honesta |
-
-**Entregaveis:** Chat com streaming, design system, componentes reusaveis, error handling, UX moderna.
+### Wave 5 — Tema A (cleanup) + Tema F (design system) + Tema G (config/i18n) + SYS-9 (testes) · resto
+- **Tema A** (PR único de higiene, baixo risco): drop `storage_path` (DB-14/DB-16, aprovação de drop), demais cleanup Supabase/Vercel.
+- **Tema F** (épico de design): UX-2 (token adoption + guard de CI) → UX-3 (contraste automatizado das 7 paletas) → UX-9/10/14/16; UX-11 (refactor que habilita SYS-9).
+- **Tema B testes** (SYS-9): testes de lógica de componente, contínuo, em paralelo.
+- **Tema G** (SYS-5/6/13 + UX-5): centralização de env/config/i18n — maior esforço, sem urgência de prod.
+**Racional:** estabilização operacional primeiro (Waves 1–4); maiores esforços sem urgência de prod por último, paralelizáveis.
 
 ---
 
-### Fase 4: Qualidade + Mobile + Acessibilidade (36-50 horas, semana 6-8)
+## Riscos e Mitigações
 
-**Objetivo:** Qualidade de producao. Testes, CI/CD, monitoring, mobile, acessibilidade.
-
-**Debitos resolvidos:** SYS-017, SYS-024, SYS-025, CROSS-005, UX-005, UX-012, SYS-009, DB-004, CROSS-NEW-001, UX-NEW-003, QA-GAP-001
-**Dependencias:** Fases 2 e 3 concluidas.
-
-| Tarefa | Horas | Dependencias | Entrega |
-|--------|-------|-------------|---------|
-| Setup Vitest + React Testing Library | 2-3 | Nenhuma | Test framework |
-| Unit tests (services, utils, components) | 6-8 | Componentes extraidos | 40-60 testes |
-| Integration tests (API, RLS, DB) | 4-6 | DB setup | 15-25 testes |
-| Setup Playwright + E2E tests | 4-6 | Nenhuma | 10-15 cenarios |
-| CI/CD pipeline (GitHub Actions -> Vercel) | 6-8 | Testes existentes | Auto-deploy |
-| Sentry integration + structured logging | 4-6 | Nenhuma | Observabilidade |
-| Vercel Analytics integration | 1-2 | Vercel deploy | Performance metrics |
-| Mobile-first redesign: dvh, touch targets, safe areas | 6-8 | Componentes | Usabilidade mobile |
-| Accessibility pass 1: ARIA, live regions, focus, contrast | 6-8 | Componentes | WCAG AA core |
-| Loading/Suspense boundaries (SYS-009) | 2-3 | Componentes | Perceived perf |
-| Token usage tracking (DB-004) | 3-4 | DB | Metricas de custo |
-| API cost management (CROSS-NEW-001) | 2-3 | DB-004 | Budget control |
-| Greetings personalizados (UX-NEW-003) | 2-3 | DB minds config | Imersao |
-| Nota licenciamento para @pm (QA-GAP-001) | 0.5 | Nenhuma | Documentacao |
-
-**Paralelizavel:** Testes (backend) + Mobile/A11y (frontend).
-
-**Entregaveis:** 80%+ test coverage, CI/CD funcional, mobile usavel, a11y basica, monitoring ativo.
+| Risco | IDs Afetados | Mitigação |
+|-------|--------------|-----------|
+| **Aplicar FK/UNIQUE/índice em prod viva via psql manual** — anti-padrão que gerou DB-4/5/8 reaparece se o hardening rodar antes do runner | DB-2/5/6/9 (Tema C) × **SYS-10** | **Bloqueio de ordem não-negociável:** SYS-10 + SYS-11 ANTES de qualquer DDL do Tema C. `NOT VALID`/`VALIDATE` (FK) e `CREATE INDEX CONCURRENTLY` via runner versionado. `pg_dump` antes de dedupe/clean. |
+| **Upgrade drizzle-orm (CVE SQL-inj) coincide com migrações de hardening** — subir o ORM no meio do Tema C muda geração de SQL | **SYS-15** × DB-5/2/6 | Subir `drizzle-orm ^0.45.2` **antes** de escrever as migrations (Wave 1, não no meio). Re-gerar/revisar migrations sob a versão patched. Patch minor, risco baixo, deve preceder o track. |
+| **Pipeline Gemini = single point of knowledge loss silencioso** — URI expira → cron único renova → upsert não recupera → sem alerta | SYS-1 + DB-5 + DB-3 + **SYS-16** | Tema E (auto-cura elimina dependência do cron) + DB-5 UNIQUE (destrava upsert) + DB-3 NFC + **alerting Sentry no cron** (SYS-16). Os quatro juntos removem o risco; isolados, cada um deixa furo. |
+| **Signup público sem Zod + sem FK em user_id** — rota não-autenticada cria users; `user_id` nunca garantido válido | **SYS-14** × DB-2 × DB-1 | Canalizar signup por `users` service + Zod schema, DEPOIS FKs (DB-2) — contrato app-only (DB-1) blindado nas duas pontas (escrita validada + integridade referencial). |
+| **CVE Next.js (middleware/CSP/DoS) × NextAuth beta no mesmo runtime** | **SYS-15** × SYS-2 | Tratar upgrade Next + reavaliação NextAuth como passada coordenada de auth (Wave 1). Testar middleware (runtime nodejs) após ambos — o teste de integração de middleware existente é a rede mínima. |
+| **FK CASCADE cego apaga billing** — delete de user cascateia `token_usage` (dado financeiro) | DB-2 × `token_usage` | Política por tabela: CASCADE em dados pessoais (conversations/mind_memories/debates/rate_limits); **SET NULL/RESTRICT + arquivamento em `token_usage`**. AC explícito por tabela. |
+| **Rebaixar claim WCAG AA (UX-4) independente, mas validação real (UX-3) depende de UX-2** — claim público não-comprovado enquanto QG2/QG3 pendentes | UX-4, UX-15, UX-3, UX-2 | Rebaixar o claim AGORA (~1h, Wave 0), spot-check tático de contraste, DEPOIS UX-2 (tokens) → UX-3 automatizado. |
+| **Constraint sobre dados sujos aborta** — UNIQUE/FK falha se houver duplicatas/órfãos | DB-5, DB-2 | Dedupe/audit de órfãos read-only (Wave 0) como **gate** antes de qualquer constraint. `pg_dump` antes de dedupe. Não prosseguir com órfão/duplicata > 0 sem decisão explícita. |
 
 ---
 
-### Fase 5: Polish & Launch Readiness (20-30 horas, semana 8-10)
+## Critérios de Sucesso (ACs que alimentam stories @pm, Fase 10)
 
-**Objetivo:** Production readiness. Polimento visual, SEO, branding, documentacao.
+### Cluster Segurança — SYS-15, SYS-14, SYS-2
+- **`npm audit` gate no CI:** build falha em vuln HIGH não-waived. AC: `drizzle-orm ≥0.45.2`, Next patched; audit limpo em HIGH.
+- **Signup validation:** Zod schema rejeita e-mail malformado, senha curta, payload extra/injection. AC: rota pública de signup tem schema validation com casos de borda.
+- **Boundary:** signup passa por `users` service; nenhum import `@/db` direto na rota.
+- **Auth path:** middleware (runtime nodejs) testado pós-upgrade Next + NextAuth.
 
-**Debitos resolvidos:** UX-013, UX-014, UX-015, UX-NEW-006, SYS-006, SYS-020, SYS-023, SYS-026, CROSS-004, UX-011, UX-NEW-007
-**Dependencias:** Fases 0-4 concluidas.
+### Cluster DB / Tema C — DB-2, DB-5, DB-6, DB-9
+- **Migration-rollback:** cada migration de hardening tem `up`→`down`→schema idêntico ao baseline, verificado em staging com dump de prod.
+- **Constraint integration:** após UNIQUE em `file_uri_cache`, `INSERT ... ON CONFLICT (knowledge_document_id)` faz upsert (não aborta); 2 inserts concorrentes do mesmo doc → 1 linha final.
+- **FK CASCADE/SET NULL:** delete de user → `conversations/mind_memories/debates` cascateiam; **`token_usage` preserva** (SET NULL/RESTRICT). AC explícito por tabela.
+- **Orphan-audit (gate pré-migração):** query read-only de órfãos = 0 antes do `VALIDATE CONSTRAINT`.
+- **CHECK:** insert raw com `messages.role='invalid'` é rejeitado pós-DB-9.
 
-| Tarefa | Horas | Entrega |
-|--------|-------|---------|
-| Favicon + app icons customizados | 2-3 | Branding |
-| Meta tags completos (OG, Twitter Cards, structured data) | 2-3 | Social sharing |
-| Empty states com ilustracoes e CTAs | 3-4 | Onboarding |
-| Onboarding / tutorial para novos usuarios (UX-NEW-006) | 4-6 | First-use experience |
-| Fix `.env` tracking (SYS-006) | 1 | Security hygiene |
-| Code documentation (JSDoc, inline) | 3-4 | Maintainability |
-| Fix error message in ingest script (SYS-023) | 0.5 | Correctness |
-| Docker setup (SYS-026) | 3-4 | Reproducible builds |
-| Fix font declarations (UX-011) | 0.5 | Design consistency |
-| Feedback haptico/sonoro (UX-NEW-007) | 1-2 | Polish |
+### Cluster Pipeline Gemini / Tema E — SYS-1, DB-3, DB-5, SYS-16
+- **Self-healing:** URI expirado → app re-faz upload sob demanda → cache repopula sem cron. AC: chat usa knowledge mesmo com cache stale.
+- **NFC normalization:** ingest de doc NFD → `local_path` em NFC → JOIN por igualdade casa. Backfill verificado.
+- **Alerting:** falha do cron de renovação dispara evento Sentry verificável (mock `captureException`). AC: cron failure ≠ silencioso.
 
-**Entregaveis:** App pronta para lancamento publico.
+### Cluster Deploy / Tema B — SYS-9, SYS-10, SYS-11
+- **Smoke pós-deploy:** `GET /api/health` (200, DB+auth) **E** `/api/chat` com resposta Gemini real. AC: falha de Gemini auth derruba o smoke (hoje passa o healthcheck).
+- **Component tests:** cobertura de **lógica** (não só a11y) para `chat-interface` (streaming, token-warning, scroll), `debate-interface`, `conversation-drawer`. AC: ≥ os 3 de maior risco com testes de estado/interação.
+- **e2e debate:** spec Playwright para o fluxo de debate (hoje só chat/home/login/protected têm e2e).
+- **Migration runner:** suporta `CONCURRENTLY`, `NOT VALID`/`VALIDATE`, `pg_dump` pré-migração, rollback step-by-step.
 
----
-
-### Fase 6: Features Legendarias (semana 10+, estimativas individuais)
-
-**Objetivo:** Diferenciais competitivos que tornam o produto memoravel. Nao sao debitos -- sao features estrategicas.
-
-| Feature | Horas | Diferenciador | Dependencias |
-|---------|-------|---------------|-------------|
-| **Temas visuais por mente** (Session Themes) | 8-12 | Nenhum competidor oferece. Cada mente transforma o ambiente. | Design tokens completos |
-| **Multi-Mind Debates V1** (round-robin) | 16-24 | Debates AI-to-AI entre pensadores historicos. Unico. | Streaming, DB, Supabase Realtime |
-| **Mind Memory** (recall cross-session) | 12-16 | "Last time we spoke..." Conexao emocional. | DB conversations + summarization |
-| **Rich Message Formatting** (code, LaTeX, collapsible) | 12-16 | Essencial para minds tecnicas (fisicos, matematicos). | Componentes de chat |
-| **Mind Profile Pages** (`/mind/{slug}`) | 6-8 (fase 1) | Identidade e discoverability. | DB minds + componentes |
-| **Conversation Sharing** (link publico) | 8-12 | Viral growth. "Olha minha conversa com Einstein." | DB (share_slug), RLS |
-| **Voice Mode** (TTS/STT) | 16-24 | "Ouvir Socrates falar." Transformador. | Web Speech API ou ElevenLabs |
-| **Ambient Soundscapes** | 8-12 | Imersao sensorial. Lyra grega para Socrates. | Audio assets |
-| **i18n / Multi-language** (CROSS-004) | 6-8 | Expansao global. | next-intl |
-| **PWA / Offline** (UX-021) | 6-8 | Install-to-homescreen. | Service worker |
-| **Accessibility Pass 2** (NVDA/VoiceOver, reduced motion, axe-core automation) | 8-12 | Full WCAG AA compliance. | Pass 1 concluido |
+### Cluster UX / Tema F — UX-2, UX-3, UX-4
+- **Contrast CI (pós-UX-2):** script percorre 7 paletas mind-theme × estados, valida 4.5:1 / 3:1. AC: build falha se paleta regredir.
+- **Token-regression guard:** ESLint/grep no CI falha em `text-gray-`/`bg-purple-`/`text-white` fora da whitelist. AC: base não re-acumula cores cruas.
+- **a11y doc reconciliation:** claim AA rebaixado para "AA-targeted, validation pending"; contradição do skip-link removida. AC verificável por revisão do doc.
 
 ---
 
-## Riscos e Mitigacoes
+## Nota de Consolidação Final
 
-| # | Risco | Probabilidade | Impacto | Mitigacao |
-|---|-------|--------------|---------|-----------|
-| 1 | **Sistema inoperante (File URIs expirados).** Nenhuma conversa funciona desde 2026-01-02. | 100% (atual) | CRITICO | Fase 0: re-ingestion imediata via CLI. Depois, cron automatico. |
-| 2 | **Prompt injection + sem auth = risco legal.** Qualquer pessoa pode gerar conteudo inapropriado "em nome de" pessoa real. | ALTA | CRITICO | Auth (SYS-001) + input validation (SYS-003) + prompt security (SYS-NEW-001) em conjunto na Fase 1-2. |
-| 3 | **Migracao file-based -> DB pode causar downtime.** Se qualquer passo falhar, sistema fica mais inoperante. | MEDIA | ALTO | Dual-read transition (@data-engineer). Script de rollback para reverter ao manifest. Testar em staging. |
-| 4 | **Context window overflow em conversas longas.** 21 file URIs + historico crescente pode exceder limite do modelo. | ALTA | ALTO | Limite de mensagens no historico enviado. Gemini Cached Content API. Conversation summarization. |
-| 5 | **Race condition no manifest durante re-ingestion.** Server lendo enquanto script escreve. `readFileSync` + `writeFileSync` sem lock. | MEDIA | MEDIO | Parar servidor durante re-ingestion (Fase 0). DB resolve permanentemente (Fase 2). |
-| 6 | **Custos de API nao controlados.** Sem tracking, sem budget cap, sem alertas. | ALTA | ALTO | DB-004 (token tracking) + CROSS-NEW-001 (cost management) na Fase 4. Rate limiting na Fase 1. |
-| 7 | **Performance em serverless com sync I/O.** `readFileSync` bloqueia event loop em Vercel Lambda. | MEDIA (se deploy Vercel) | MEDIO | SYS-014 (async reads) elevado para Fase 1. |
-| 8 | **Scope creep na visao "legendaria".** Temas, soundscapes, voice mode podem consumir 100+ horas. | ALTA | MEDIO | Fases estritamente incrementais. Features legendarias so apos Fase 5 (launch readiness). |
-| 9 | **Termos legais do Gemini API para "clones digitais".** Personificacao de pessoas reais pode violar ToS. | BAIXA | ALTO | Analise juridica na Fase 4 (QA-GAP-001). Consulta formal aos termos do Google. |
-| 10 | **Drizzle ORM ecossistema menor.** Documentacao menos madura que Prisma. | BAIXA | BAIXO | Aceitar tradeoff pelo bundle size. Migrar para Prisma se necessario (schema PostgreSQL e portavel). |
+**Trade-off arquitetural central:** a maioria dos 49 débitos é **operacional / integridade / higiene**, não estrutural — a arquitetura `route → service → db` e a taxonomia de erros são fortes e devem ser preservadas. O risco real de produção concentra-se em (a) integridade de dados não-blindada no DB, (b) pipeline de deploy/knowledge sem rede de segurança automatizada, (c) **dependências com CVEs HIGH não-corrigidas** (descoberta da Fase 7 — o item mais barato e mais consequente) e (d) observabilidade instrumentada mas sem alerting validado. Resolver Waves 1→2→3→4 nessa ordem remove a maior parte do risco de produção com esforço majoritariamente S/M; os épicos maiores (Tema F design system, Tema G config/i18n) são sem urgência de prod e ficam para a Wave 5.
+
+**Gate Fase 7: APPROVED** — os 6 reworks enumerados pelo QA (SYS-15, SYS-16, correção SYS-9, expansão SYS-14, wording DB-12, nota SYS-11) foram incorporados; as duas dimensões ausentes (supply-chain + observabilidade) agora têm débitos com área atribuída. Cobertura de área completa nos 49 débitos.
 
 ---
 
-## Dependencias entre Debitos
-
-### Grafo de Dependencias (validado por @qa com ajustes)
-
-```
-DEPENDENCY GRAPH (A --> B significa "A depende de B")
-
-FASE 0: RECUPERACAO
-  SYS-010a (workaround CLI) ............... Zero dependencias
-  Quick fixes (UX-017, UX-010, SYS-019) .. Zero dependencias
-  QA-GAP-002 (validar idempotencia) ...... ANTES de SYS-010a
-
-CROSS-002 (Auth + Persistence)
-  |
-  +---> SYS-001 (Authentication)
-  |       |
-  |       +---> SYS-027 (Middleware) .......... Auth checks need middleware
-  |       +---> SYS-028 (next.config) ......... Security headers
-  |
-  +---> DATABASE SETUP (Novo -- nao e debito, e nova arquitetura)
-  |       |
-  |       +---> SYS-007 (Graceful env) ....... DB connection string = env var
-  |       +---> UX-004 (Chat persistence) .... Needs DB to store history
-  |       +---> CROSS-003 (Stateful arch) .... Needs DB for sessions
-  |       +---> SYS-025 (Monitoring) ......... Can log to DB/service
-  |       +---> SYS-002 (Rate limiting) ...... Persistent limits need storage
-  |       +---> SYS-013 (Session caching) .... Server-side session store
-  |       +---> CROSS-006 (KB management) .... Manifest moves to DB
-  |       +---> DB-002 (Backup) .............. Supabase Storage
-  |       +---> DB-003 (SPOF) ................ DB replaces JSON
-  |       +---> DB-005 (Concurrency) ......... ACID transactions
-
-SYS-015 / UX-003 (Streaming) *** NOTA: NAO depende de SYS-013 (@qa) ***
-  |
-  +---> SYS-021 (Separation of concerns) .... gemini.ts must be refactored
-  +---> SYS-012 (Context bloat) ............. Optimize before streaming amplifies cost
-
-SYS-017 (Test coverage)
-  |
-  +---> UX-002 (Reusable components) ........ Components must exist before unit testing
-  +---> SYS-021 (Separation of concerns) .... Modular code is testable code
-  +---> SYS-018 (Fix any types) ............. Types enable meaningful assertions
-
-SYS-024 (CI/CD)
-  |
-  +---> SYS-017 (Tests) .................... Tests must exist for CI to run them
-
-UX-001 (Design system)
-  |
-  +---> UX-002 (Reusable components) ........ Components consume design tokens
-  +---> UX-010 (Remove dead CSS) ............ Clean slate before building system
-  +---> UX-011 (Fix fonts) .................. Font system is part of tokens
-
-UX-005 (Accessibility)
-  |
-  +---> UX-002 (Reusable components) ........ ARIA belongs in shared components
-  +---> UX-001 (Design system) .............. Contrast fixes need token system
-  +---> UX-017 (Fix lang attribute) ......... Foundation for a11y
-
-CROSS-006 (KB management)
-  |
-  +---> SYS-010 (File URI expiration) ....... Must handle TTL before admin UI
-  +---> DATABASE SETUP ...................... Manifest should move to DB
-  +---> SYS-001 (Auth) ..................... Admin actions need auth
-
-SYS-NEW-001 (Prompt security)
-  |
-  +---> SYS-003 (Input validation) ......... Guardrails need validation layer
-```
-
-### Caminho Critico (validado e ajustado com inputs do @qa)
-
-```
-Fase 0: SYS-010a + quick fixes (3.5h)
-  |
-  v
-Fase 1: SYS-027 (4-6h) --> SYS-001 (12-16h) --> SYS-002 (6-8h) --> SYS-003 (4-6h)
-  |
-  v (PARALELO)
-Fase 2-Backend: DATABASE SETUP (32-48h) ----+
-Fase 3-Frontend: UX-001 + UX-002 (22-30h) --+-- convergem
-  |
-  v
-Fase 3-Integrated: SYS-021 (4-6h) --> SYS-015 streaming (12-16h)
-  |
-  v
-Fase 4: SYS-017 testes (12-16h) --> SYS-024 CI/CD (6-8h)
-
-Caminho critico estimado: 95-135 horas
-```
-
-### Oportunidades de Paralelizacao
-
-| Paralelo A (Backend) | Paralelo B (Frontend) | Justificativa |
-|----------------------|----------------------|---------------|
-| DATABASE SETUP (32-48h) | Design system + componentes (22-30h) | Zero dependencia entre si |
-| SYS-021 (refactor gemini.ts) | UX-002 (extrair componentes) | Backend e frontend refactor independentes |
-| SYS-017 (setup test framework) | SYS-024 (setup CI/CD basico) | Configuracoes paralelas |
-| SYS-028 (security headers) | UX-014 (meta tags) | Ambos em config/layout files |
-
----
-
-## Criterios de Sucesso
-
-### Por Fase
-
-| Fase | Criterio | Metrica |
-|------|----------|---------|
-| **Fase 0** | Sistema funcional: chat responde a mensagens | Smoke test passa |
-| **Fase 1** | Rotas protegidas retornam 401 sem auth. Rate limit retorna 429. Input validado. | Testes de seguranca manuais |
-| **Fase 2** | Login funciona. Conversa persiste apos refresh. File URIs renovam automaticamente. | Lighthouse, RLS tests, cron logs |
-| **Fase 3** | Primeiro token em < 500ms. Componentes reusaveis. Error boundaries. | Time-to-first-token, component count |
-| **Fase 4** | 80%+ test coverage. CI/CD funcional. Mobile usavel. a11y basica. | Coverage report, Lighthouse |
-| **Fase 5** | App pronta para lancamento. Branding, SEO, onboarding. | Checklist de launch |
-
-### Metricas Target
-
-| Metrica | Estado Atual | Fase 2 | Fase 4 | Fase 5 |
-|---------|-------------|--------|--------|--------|
-| **Time-to-first-token (streaming)** | 5-15s (full wait) | N/A | < 500ms | < 300ms |
-| **Lighthouse Performance** | ~60 (estimado) | > 70 | > 80 | > 90 |
-| **Lighthouse Accessibility** | ~30 (estimado) | > 50 | > 70 | > 90 |
-| **Lighthouse SEO** | ~50 (estimado) | > 60 | > 80 | > 95 |
-| **Test coverage (lines)** | 0% | 0% | > 80% | > 80% |
-| **Component reuse ratio** | 0% | 0% | > 60% | > 85% |
-| **WCAG AA compliance** | 0 items | Core items | > 70% | Full |
-| **Mobile usability** | Broken | Functional | Optimized | Optimized |
-| **Design token coverage** | ~5% | > 40% | > 70% | > 95% |
-| **Uptime (File URI health)** | 0% (expirado) | 100% (manual) | 99%+ (cron) | 99.9%+ |
-
----
-
-## Estrategia de Testes (definida por @qa)
-
-### Piramide de Testes Target
-
-| Tipo | Quantidade | Cobertura | Ferramenta |
-|------|-----------|-----------|-----------|
-| Unit (services, utils, componentes) | 40-60 testes | Logica isolada | Vitest + React Testing Library |
-| Integration (API, RLS, DB, server actions) | 15-25 testes | Fluxos integrados | Vitest + Supabase client |
-| E2E (fluxos criticos de usuario) | 10-15 cenarios | User journeys | Playwright |
-| **Total** | **65-100 testes** | **~80% cobertura** | |
-
-### Gemini API Mocking
-
-- **Unit/Integration:** Mock `@google/generative-ai` inteiramente. Fixtures JSON para cenarios: sucesso, rate limit, File URI expirado, resposta vazia, resposta longa.
-- **E2E:** MSW (Mock Service Worker) interceptando chamadas ao Gemini API endpoint.
-- **Streaming:** Mock `ReadableStream` com chunks pre-definidos e delays simulados.
-- **NUNCA** usar API key real em testes.
-
-### Checklists Pos-Resolucao
-
-Cada fase tem checklist de validacao definido pelo @qa (documentado em `docs/reviews/qa-review.md`, Secao "Testes Pos-Resolucao").
-
----
-
-## Visao do Produto -- "O Atheneum Digital"
-
-### Conceito (consolidado de todos os especialistas)
-
-O Mentes Sinteticas nao e apenas um chat com AI. E um **portal para dialogar com as maiores mentes da humanidade**. A experiencia deve evocar a sensacao de entrar em um espaco sagrado de conhecimento -- uma mistura de biblioteca antiga com tecnologia de fronteira.
-
-**O que torna este produto unico:**
-
-1. **Imersao sensorial** -- Temas visuais por mente (Session Themes) sao o diferenciador visual que nenhum competidor oferece. Socrates com estetica de marmore grego. Einstein com grid de equacoes e particulas. Cada conversa e uma viagem a uma era diferente.
-
-2. **Multi-Mind Debates** -- Selecionar 2-3 mentes e ve-las debater um topico. Nenhum competidor oferece debates AI-to-AI entre pensadores historicos. "O que e justica?" respondido simultaneamente por Socrates, Sun Tzu, e Marcus Aurelius.
-
-3. **Mind Memory** -- Mentes que lembram conversas anteriores. "Da ultima vez que conversamos, voce perguntou sobre etica..." Cria conexao emocional e aumenta retencao.
-
-4. **Gravitas intelectual** -- Tipografia serif para headings (Playfair Display), paleta sofisticada (gold antigo + purple profundo + teal escuro), micro-textos que comunicam reverencia. Um produto que voce mostra para amigos.
-
-### Posicionamento Visual
-
-Entre a seriedade intelectual do Claude e a personalidade imersiva do Character.ai, com a qualidade de streaming do ChatGPT. Nenhum competidor oferece temas ambientais por pensador -- este e o diferenciador.
-
-### Feature Roadmap Alem do Debt
-
-Apos resolucao de todos os debitos (Fases 0-5), o roadmap de features legendarias (Fase 6) inclui: temas por mente, Multi-Mind Debates, Voice Mode, Mind Memory, Rich Formatting, Mind Profiles, Conversation Sharing, Ambient Soundscapes. Estimativa total: 100-150 horas adicionais.
-
----
-
-## Schema de Dados Proposto (@data-engineer)
-
-O schema completo (7 tabelas + RLS + triggers + indexes) esta documentado em `docs/reviews/db-specialist-review.md`, Secao 3.2. Resumo das tabelas:
-
-| Tabela | Proposito | Chave |
-|--------|---------|-------|
-| `profiles` | Dados adicionais de usuario (Supabase Auth gerencia `auth.users`) | UUID (FK auth.users) |
-| `minds` | Catalogo de pensadores com config de modelo | UUID, slug unico |
-| `mind_files` | Knowledge base URIs com TTL tracking e status | UUID, FK minds |
-| `conversations` | Sessoes de chat com metadata e sharing | UUID, FK users + minds |
-| `messages` | Append-only log de mensagens com token tracking | UUID, FK conversations |
-| `analytics_events` | Eventos de uso (event sourcing) | BIGSERIAL |
-| `file_refresh_log` | Auditoria de renovacao de File URIs | BIGSERIAL, FK mind_files |
-
----
-
-## Notas Finais
-
-### Para Phase 9 (@analyst)
-
-Este documento contem todos os dados necessarios para o TECHNICAL-DEBT-REPORT executivo: 65 debitos, 350-470h de esforco total, 180-250h de core (P0+P1), plano de 6 fases, e stack tecnologica consensual.
-
-### Para Phase 10 (@pm)
-
-Os debitos estao prontos para serem convertidos em epics e stories. Sugestao de estrutura:
-
-- **Epic 1:** Recuperacao e Seguranca (Fases 0-1)
-- **Epic 2:** Fundacao de Dados (Fase 2)
-- **Epic 3:** Experiencia de Chat Moderna (Fase 3)
-- **Epic 4:** Qualidade e Production Readiness (Fases 4-5)
-- **Epic 5:** Features Legendarias (Fase 6)
-
-**Nota juridica:** Verificar termos de servico do Gemini API para criacao de "clones digitais" de pessoas reais (QA-GAP-001).
-
-### Alertas Criticos do @data-engineer
-
-1. **Gemini Cached Content API** deve ser avaliada ANTES de decidir estrategia de context injection. Se usar cached content, o fluxo de `gemini.ts` muda drasticamente.
-2. **Supabase free tier** permite 500K Edge Function invocations/mes. Monitorar se numero de minds crescer.
-3. **Schema tem dependencia circular** em `profiles.default_mind_id REFERENCES minds(id)`. Usar `DEFERRABLE INITIALLY DEFERRED` ou inserir sem default inicialmente.
-
----
-
-*Este documento foi gerado como Phase 8 de Brownfield Discovery por @architect (Aria).*
-*Consolida e finaliza os achados de Phase 4 (DRAFT), Phase 5 (@data-engineer), Phase 6 (@ux-design-expert), e Phase 7 (@qa).*
-*Todos os debitos, severidades, estimativas, e prioridades foram validados por pelo menos 2 especialistas.*
-
-*Synkra AIOX v2.0*
+*Documento FINAL gerado na Fase 8 (Consolidação) do Brownfield Discovery. Substitui `technical-debt-DRAFT.md` como fonte de verdade. Alimenta o épico + stories do @pm (Fase 10) e o relatório executivo do @analyst (Fase 9).*
