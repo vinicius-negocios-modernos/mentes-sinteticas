@@ -142,7 +142,10 @@ export default function ChatHeader({
                   ? "text-amber-400"
                   : "text-muted-foreground"
               )}
-              title={`Uso diario: ${usage.daily.percentage}% | $${usage.daily.cost.toFixed(4)}`}
+              title={t("chat.usageTooltip", {
+                percentage: String(usage.daily.percentage),
+                cost: usage.daily.cost.toFixed(4),
+              })}
             >
               {formatTokenCount(usage.daily.tokens)}
             </span>

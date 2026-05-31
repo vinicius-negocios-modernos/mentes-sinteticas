@@ -97,7 +97,7 @@ export default function SharePopover({
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Erro ao compartilhar");
+        throw new Error(data?.error || t("sharing.shareError"));
       }
 
       const data = await res.json();
@@ -106,7 +106,7 @@ export default function SharePopover({
       setShowMenu(false);
     } catch (error) {
       const msg =
-        error instanceof Error ? error.message : "Erro ao compartilhar";
+        error instanceof Error ? error.message : t("sharing.shareError");
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -125,7 +125,7 @@ export default function SharePopover({
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Erro ao revogar compartilhamento");
+        throw new Error(data?.error || t("sharing.revokeError"));
       }
 
       onShareChange(false, null);
@@ -137,7 +137,7 @@ export default function SharePopover({
       const msg =
         error instanceof Error
           ? error.message
-          : "Erro ao revogar compartilhamento";
+          : t("sharing.revokeError");
       toast.error(msg);
     } finally {
       setIsLoading(false);

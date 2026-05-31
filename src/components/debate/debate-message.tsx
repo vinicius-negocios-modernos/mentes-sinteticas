@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -81,19 +82,19 @@ function DebateMessageInner({
       <div
         className={cn("flex gap-3 flex-row-reverse", className)}
         role="article"
-        aria-label="Voce disse"
+        aria-label={t("debate.youSaid")}
       >
         <Avatar className="shrink-0 mt-1 bg-cyan-600/30">
           <AvatarFallback className="text-xs font-semibold bg-cyan-600/30 text-cyan-200">
-            EU
+            {t("chat.userLabel")}
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col max-w-[80%] items-end">
           <span className="text-xs text-cyan-300 mb-1 px-1 font-medium">
-            Voce
+            {t("debate.youLabel")}
           </span>
           <div className="p-4 rounded-2xl bg-cyan-600/15 border border-cyan-500/25 text-white rounded-br-none">
-            <span className="sr-only">Voce:</span>
+            <span className="sr-only">{t("debate.youSr")}</span>
             <div className="prose prose-invert prose-sm max-w-none">
               {renderedMarkdown}
             </div>
@@ -107,7 +108,7 @@ function DebateMessageInner({
     <div
       className={cn("flex gap-3 flex-row", className)}
       role="article"
-      aria-label={`${mindName ?? "Mente"} disse`}
+      aria-label={t("debate.mindSaid", { mindName: mindName ?? t("debate.mindFallbackCap") })}
     >
       <Avatar
         className={cn("shrink-0 mt-1", color.bg)}
@@ -117,18 +118,18 @@ function DebateMessageInner({
           className={cn("text-xs font-semibold", color.bg, color.text)}
           aria-hidden="true"
         >
-          {mindName ? getInitials(mindName) : "MS"}
+          {mindName ? getInitials(mindName) : t("chat.defaultMindInitials")}
         </AvatarFallback>
       </Avatar>
 
       <div className="flex flex-col max-w-[80%] items-start">
         <div className="flex items-center gap-2 mb-1 px-1">
           <span className={cn("text-xs font-medium", color.text)}>
-            {mindName ?? "Mente"}
+            {mindName ?? t("debate.mindFallbackCap")}
           </span>
           {turnNumber !== undefined && (
             <span className="text-xs text-muted-foreground">
-              Turno {turnNumber + 1}
+              {t("debate.turnNumberLabel", { turn: String(turnNumber + 1) })}
             </span>
           )}
         </div>
@@ -141,7 +142,7 @@ function DebateMessageInner({
           )}
           style={{ boxShadow: `0 0 20px ${color.glow}` }}
         >
-          <span className="sr-only">{mindName ?? "Mente"}:</span>
+          <span className="sr-only">{t("debate.mindSr", { mindName: mindName ?? t("debate.mindFallbackCap") })}</span>
           <div className="prose prose-invert prose-sm prose-p:leading-relaxed max-w-none">
             {renderedMarkdown}
           </div>
@@ -170,7 +171,7 @@ export function DebateMessageLoading({
   const color = DEBATE_COLORS[colorIndex % DEBATE_COLORS.length];
 
   return (
-    <div className="flex gap-3" role="status" aria-live="polite" aria-label={`${mindName} esta respondendo`}>
+    <div className="flex gap-3" role="status" aria-live="polite" aria-label={t("debate.mindResponding", { mindName })}>
       <Avatar className={cn("shrink-0 mt-1", color.bg)} aria-hidden="true">
         <AvatarFallback
           className={cn("text-xs font-semibold", color.bg, color.text)}
@@ -188,7 +189,7 @@ export function DebateMessageLoading({
             color.border
           )}
         >
-          <span className="sr-only">{mindName} esta pensando...</span>
+          <span className="sr-only">{t("debate.mindThinking", { mindName })}</span>
           {/* Animated dots — hidden for reduced-motion, replaced by static text */}
           {[0, 150, 300].map((delay) => (
             <div
@@ -199,7 +200,7 @@ export function DebateMessageLoading({
             />
           ))}
           <span className="hidden motion-reduce:inline text-xs text-muted-foreground" aria-hidden="true">
-            Pensando...
+            {t("debate.thinking")}
           </span>
         </div>
       </div>

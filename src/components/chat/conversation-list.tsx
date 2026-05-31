@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteConversation } from "@/app/actions";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EmptyState from "@/components/ui/empty-state";
@@ -21,9 +22,9 @@ function formatDate(date: Date): string {
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return "Hoje";
-  if (diffDays === 1) return "Ontem";
-  if (diffDays < 7) return `${diffDays}d atras`;
+  if (diffDays === 0) return t("chat.today");
+  if (diffDays === 1) return t("chat.yesterday");
+  if (diffDays < 7) return `${diffDays}${t("chat.daysAgo")}`;
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
@@ -48,7 +49,7 @@ export default function ConversationList({
 
   async function handleDelete(e: React.MouseEvent, conversationId: string) {
     e.stopPropagation();
-    if (!confirm("Excluir esta conversa?")) return;
+    if (!confirm(t("chat.deleteConfirm"))) return;
 
     setDeletingId(conversationId);
     await deleteConversation(conversationId);
@@ -71,7 +72,7 @@ export default function ConversationList({
           variant="outline"
           className="w-full justify-start bg-purple-600/20 border-purple-500/30 hover:bg-purple-600/40 text-purple-200"
         >
-          + Nova Conversa
+          {t("chat.newConversation")}
         </Button>
 
         {conversations.length === 0 && (
@@ -82,8 +83,8 @@ export default function ConversationList({
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             }
-            title="Nenhuma conversa ainda"
-            description="Inicie um dialogo com esta mente para explorar novas ideias."
+            title={t("chat.noConversations")}
+            description={t("chat.noConversationsDescription")}
           />
         )}
 
@@ -102,12 +103,12 @@ export default function ConversationList({
           >
             <div className="flex justify-between items-start gap-2">
               <span className="truncate flex-1">
-                {conv.title || "Sem titulo"}
+                {conv.title || t("chat.noTitle")}
               </span>
               <button
                 onClick={(e) => handleDelete(e, conv.id)}
                 className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity text-xs shrink-0 min-h-11 min-w-11 flex items-center justify-center"
-                title="Excluir conversa"
+                title={t("chat.deleteConversation")}
               >
                 X
               </button>

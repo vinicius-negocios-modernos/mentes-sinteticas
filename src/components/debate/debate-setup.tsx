@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 import type { DebateParticipantInfo } from "@/lib/types";
 
 interface MindOption {
@@ -31,7 +32,7 @@ export default function DebateSetup() {
           setMinds(data.minds ?? data ?? []);
         }
       } catch {
-        toast.error("Erro ao carregar mentes.");
+        toast.error(t("debate.errorLoadMinds"));
       } finally {
         setIsLoadingMinds(false);
       }
@@ -45,7 +46,7 @@ export default function DebateSetup() {
         return prev.filter((s) => s !== slug);
       }
       if (prev.length >= 4) {
-        toast.warning("Maximo de 4 mentes por debate.");
+        toast.warning(t("debate.maxMinds"));
         return prev;
       }
       return [...prev, slug];
@@ -54,11 +55,11 @@ export default function DebateSetup() {
 
   const handleSubmit = async () => {
     if (topic.trim().length < 3) {
-      toast.error("O topico deve ter pelo menos 3 caracteres.");
+      toast.error(t("debate.minTopic"));
       return;
     }
     if (selectedSlugs.length < 2) {
-      toast.error("Selecione pelo menos 2 mentes para o debate.");
+      toast.error(t("debate.minMinds"));
       return;
     }
 
@@ -72,14 +73,14 @@ export default function DebateSetup() {
 
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error ?? "Erro ao criar debate.");
+        toast.error(data.error ?? t("debate.errorCreate"));
         return;
       }
 
       const data = await res.json();
       router.push(`/debate/${data.debateId}`);
     } catch {
-      toast.error("Erro ao criar debate. Tente novamente.");
+      toast.error(t("debate.errorCreateRetry"));
     } finally {
       setIsLoading(false);
     }
@@ -91,22 +92,22 @@ export default function DebateSetup() {
     <form
       className="max-w-2xl mx-auto w-full space-y-8"
       onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
-      aria-label="Configurar debate"
+      aria-label={t("debate.setupFormLabel")}
     >
       {/* Topic Input */}
       <fieldset className="space-y-2">
-        <legend className="sr-only">Topico do debate</legend>
+        <legend className="sr-only">{t("debate.topicLegend")}</legend>
         <label
           htmlFor="debate-topic"
           className="block text-sm font-medium text-gray-300"
         >
-          Topico do Debate
+          {t("debate.topicLabel")}
         </label>
         <textarea
           id="debate-topic"
           rows={3}
           maxLength={500}
-          placeholder="Ex: Qual e o papel da tecnologia no futuro da educacao?"
+          placeholder={t("debate.topicPlaceholder")}
           className="w-full rounded-lg bg-gray-800/60 border border-gray-700/50 p-3 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
@@ -115,19 +116,19 @@ export default function DebateSetup() {
           minLength={3}
         />
         <p id="topic-char-count" className="text-xs text-muted-foreground">
-          {topic.length}/500 caracteres
+          {t("debate.charCount", { count: String(topic.length) })}
         </p>
       </fieldset>
 
       {/* Mind Selector */}
       <fieldset className="space-y-3">
-        <legend className="sr-only">Selecione as mentes participantes</legend>
+        <legend className="sr-only">{t("debate.mindsLegend")}</legend>
         <div role="group" aria-labelledby="mind-selector-label">
           <p id="mind-selector-label" className="text-sm font-medium text-gray-300 mb-3">
-            Selecione as Mentes ({selectedSlugs.length}/4)
+            {t("debate.selectMindsCount", { count: String(selectedSlugs.length) })}
           </p>
           {isLoadingMinds ? (
-            <div className="grid grid-cols-2 gap-3" aria-busy="true" aria-label="Carregando mentes">
+            <div className="grid grid-cols-2 gap-3" aria-busy="true" aria-label={t("debate.loadingMinds")}>
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
@@ -137,7 +138,7 @@ export default function DebateSetup() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3" role="group" aria-label="Mentes disponiveis">
+            <div className="grid grid-cols-2 gap-3" role="group" aria-label={t("debate.availableMinds")}>
               {minds.map((mind) => {
                 const isSelected = selectedSlugs.includes(mind.slug);
                 return (
@@ -146,7 +147,7 @@ export default function DebateSetup() {
                     type="button"
                     role="checkbox"
                     aria-checked={isSelected}
-                    aria-label={`${mind.name}${mind.title ? ` — ${mind.title}` : ""}${isSelected ? " (selecionada)" : ""}`}
+                    aria-label={`${mind.name}${mind.title ? `${t("debate.mindOptionTitleSep")}${mind.title}` : ""}${isSelected ? t("debate.mindOptionSelected") : ""}`}
                     onClick={() => toggleMind(mind.slug)}
                     className={cn(
                       "p-4 rounded-lg border text-left transition-all",
@@ -176,9 +177,9 @@ export default function DebateSetup() {
         type="submit"
         disabled={!isValid || isLoading}
         className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-medium py-3 min-h-11"
-        aria-label={isLoading ? "Criando debate, aguarde" : "Iniciar debate"}
+        aria-label={isLoading ? t("debate.creatingAria") : t("debate.startDebateAria")}
       >
-        {isLoading ? "Criando Debate..." : "Iniciar Debate"}
+        {isLoading ? t("debate.creating") : t("debate.startDebate")}
       </Button>
     </form>
   );

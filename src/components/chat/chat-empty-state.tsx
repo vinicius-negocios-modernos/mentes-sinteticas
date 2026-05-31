@@ -1,15 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
+import { messages } from "@/lib/i18n/messages/pt-BR";
 
-const DEFAULT_SUGGESTED_PROMPTS = [
-  "Qual sua visao sobre lideranca?",
-  "Resuma seus principais ensinamentos",
-  "Como aplicar suas ideias no mundo atual?",
-  "Conte sobre uma experiencia transformadora",
-];
+const DEFAULT_SUGGESTED_PROMPTS = messages.chat.suggestedPrompts;
 
-const DEFAULT_GREETING = "Explore ideias, questione estrategias, aprofunde conhecimentos";
+const DEFAULT_GREETING = t("chat.defaultGreeting");
 
 interface ChatEmptyStateProps {
   mindName: string;
@@ -79,7 +76,7 @@ export default function ChatEmptyState({
         className="text-xl font-semibold bg-clip-text text-transparent mb-2"
         style={{ backgroundImage: "linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)))" }}
       >
-        Converse com {mindName}
+        {t("chat.talkToMind", { mindName })}
       </h2>
       <p className="text-sm text-muted-foreground max-w-md mb-8">
         {displayGreeting}

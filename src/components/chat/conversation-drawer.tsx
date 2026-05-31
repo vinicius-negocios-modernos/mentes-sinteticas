@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { t } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -32,7 +33,7 @@ export default function ConversationDrawer({
           variant="ghost"
           size="icon"
           className="md:hidden shrink-0 text-gray-400 hover:text-white"
-          aria-label="Abrir conversas"
+          aria-label={t("chat.openConversations")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -54,7 +55,7 @@ export default function ConversationDrawer({
       <SheetContent side="left" className="w-72 p-4 bg-background">
         <SheetHeader className="mb-4">
           <SheetTitle className="text-sm font-semibold text-muted-foreground">
-            Conversas
+            {t("chat.conversationsTitle")}
           </SheetTitle>
         </SheetHeader>
         <div onClick={() => setOpen(false)}>

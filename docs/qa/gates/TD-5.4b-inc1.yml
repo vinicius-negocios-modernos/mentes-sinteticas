@@ -1,0 +1,115 @@
+# Quality Gate — Story TD-5.4b, Increment 1 (Chat + Debate frontend i18n)
+storyId: TD-5.4b
+increment: 1
+incrementScope: "Chat + Debate frontend — 13 components migrated to t() (UX-5 partial)"
+verdict: PASS
+reviewer: Quinn (@qa)
+date: 2026-05-31
+storyStatusAfterGate: InProgress # Inc2 + Inc3 still pending
+
+summary: >
+  Increment 1 migrated ~95 hardcoded PT-BR strings across 13 chat/debate components
+  to t(), adding ~73 keys to src/lib/i18n/messages/pt-BR.ts. The core risk for this
+  increment is (a) a key-leak — a t() key with no defined string would render its
+  dot-path on screen — and (b) a byte-identical violation — visible text drift.
+  Both were verified clean. All four CI gates are green.
+
+qualityGates:
+  tests:
+    command: "vitest --maxWorkers=2 --run"
+    result: PASS
+    detail: "447/447 passed (40 suites). TD-5.5 a11y/interface tests assert exact strings ('Mensagem de Socrates', 'Pausar debate', 'Round 1/3') — they pass, independently confirming byte-identical."
+  build:
+    command: "npm run build (next build)"
+    result: PASS
+  lint:
+    command: "npm run lint (eslint)"
+    result: PASS
+    exitCode: 0
+    detail: "0 errors, 9 warnings (8 pre-existing). 1 new warning in an Inc-1 file: unused type import 'DebateParticipantInfo' in debate-setup.tsx — cosmetic, not user-facing."
+  typecheck:
+    command: "npx tsc --noEmit"
+    result: PASS
+    errors: 0
+
+keyLeakCheck:
+  method: "Extracted all t('...') keys from the 13 Inc-1 files; resolved each through the real t() function (via vitest harness). A returned value equal to the key = a dot-path leak."
+  keysChecked: 165
+  resolved: 165
+  leaks: 0
+  result: PASS
+  conclusion: "Every t() key used in the 13 Inc-1 components resolves to a defined string. Zero dot-path can render to the UI."
+
+byteIdenticalSpotCheck:
+  count: 10
+  result: PASS
+  samples:
+    - key: chat.messageFrom
+      original: "`Mensagem de ${mindName}`"
+      value: "Mensagem de {mindName}"
+      match: true
+      note: "TD-5.5 asserts 'Mensagem de Socrates' — passes"
+    - key: chat.initialGreeting
+      original: "`Ola. Eu sou a consciencia digital de **${mindName}**. Em que posso contribuir para sua estrategia hoje?`"
+      value: "identical with {mindName}"
+      match: true
+    - key: chat.tokenWarning
+      original: "Voce usou mais de 80% do seu limite diario de tokens."
+      value: "identical"
+      match: true
+    - key: chat.usageTooltip
+      original: "`Uso diario: ${pct}% | $${cost}`"
+      value: "Uso diario: {percentage}% | ${cost}"
+      match: true
+      note: "literal $ before {cost} preserved"
+    - key: debate.startInstruction
+      original: "Clique em &quot;Proximo Turno&quot; para iniciar o debate."
+      value: 'Clique em "Proximo Turno" para iniciar o debate.'
+      match: true
+      note: "&quot; JSX entity renders as \" — value uses real double-quote. Flagged by @dev; verified byte-identical at render time."
+    - key: debate.mindFallback
+      original: "?? \"mente\" (debate-interface.tsx, lowercase)"
+      value: "mente"
+      match: true
+    - key: debate.mindFallbackCap
+      original: "?? \"Mente\" (debate-message.tsx, 3 sites, capitalized)"
+      value: "Mente"
+      match: true
+      note: "Casing split flagged by @dev — verified: interface uses lowercase, message uses capitalized, mapped to two distinct keys correctly."
+    - key: debate.debateActionToast
+      original: "`Debate ${labels[action]}.` (labels: pausado/retomado/encerrado)"
+      value: "Debate {action}."
+      match: true
+      note: "interpolated; labels values preserved"
+    - key: debate.roundLabel / debate.turnLabel
+      original: "Round / Turno (literals)"
+      value: "Round / Turno"
+      match: true
+      note: "TD-5.5 asserts /Round 1\\/3/ — passes"
+    - key: debate.pauseAria
+      original: "Pausar debate"
+      value: "Pausar debate"
+      match: true
+      note: "TD-5.5 asserts aria-label 'Pausar debate' — passes"
+
+coverage:
+  result: COMPLETE
+  detail: >
+    Scanned all 13 Inc-1 files for residual user-facing hardcoded PT-BR strings
+    (quoted literals and JSX text nodes). Zero missed user-facing strings. The only
+    remaining quoted PT-BR-ish literals are non-user-facing: API route paths
+    ('/api/debate', '/debate'), htmlFor/id attributes ('debate-topic'), a type literal
+    ('conversation'), and displayName ('DebateMessage').
+
+issues:
+  - severity: low
+    category: code
+    description: "Unused type import 'DebateParticipantInfo' in src/components/debate/debate-setup.tsx (eslint no-unused-vars warning, 0-error)."
+    recommendation: "Remove the unused import in a follow-up or during Inc-2 touch of debate files. Non-blocking, not user-facing."
+
+decision: >
+  PASS. Tests/build/lint/tsc all green. Zero key-leak across 165 keys checked.
+  All 10 byte-identical spot-checks (including the @dev-flagged &quot; quote-encoding
+  and the mindFallback/mindFallbackCap casing split) confirmed exact. Coverage for
+  Inc-1's 13 files is complete. Story remains InProgress — Increment 2 (mind/auth/
+  layout) and Increment 3 (SYS-13 backend) are still pending.

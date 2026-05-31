@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import DebateMessage, { DebateMessageLoading, DEBATE_COLORS } from "./debate-message";
 import type { DebateParticipantInfo, DebateStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 interface DebateMessageData {
   role: "user" | "model";
@@ -90,10 +91,10 @@ export default function DebateInterface({
         const data = await res.json();
         if (data.status === "completed") {
           setStatus("completed");
-          toast.info("Debate concluido!");
+          toast.info(t("debate.debateCompletedToast"));
           return;
         }
-        toast.error(data.error ?? "Erro ao avancar turno.");
+        toast.error(data.error ?? t("debate.errorNextTurn"));
         return;
       }
 
@@ -105,7 +106,7 @@ export default function DebateInterface({
       const colorIndex = colorMap.get(mindSlug) ?? 0;
 
       setStreamingMind({ name: mindName, slug: mindSlug, colorIndex });
-      setStatusAnnouncement(`Vez de ${mindName}`);
+      setStatusAnnouncement(t("debate.turnOf", { mindName }));
 
       // Read stream
       const reader = res.body?.getReader();
@@ -138,11 +139,11 @@ export default function DebateInterface({
       // Check if debate completed
       if (turn + 1 >= totalTurns) {
         setStatus("completed");
-        setStatusAnnouncement("Debate finalizado");
-        toast.info("Debate concluido — todos os rounds foram completados.");
+        setStatusAnnouncement(t("debate.debateFinished"));
+        toast.info(t("debate.debateCompletedAllRounds"));
       }
     } catch {
-      toast.error("Erro ao processar turno. Tente novamente.");
+      toast.error(t("debate.errorProcessTurn"));
     } finally {
       setIsStreaming(false);
       setStreamingText("");
@@ -162,7 +163,7 @@ export default function DebateInterface({
 
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error ?? "Erro ao intervir.");
+        toast.error(data.error ?? t("debate.errorInterject"));
         return;
       }
 
@@ -173,7 +174,7 @@ export default function DebateInterface({
       setInterjectText("");
       setShowInterject(false);
     } catch {
-      toast.error("Erro ao enviar interjeccao.");
+      toast.error(t("debate.errorSendInterject"));
     }
   };
 
@@ -188,13 +189,21 @@ export default function DebateInterface({
       if (res.ok) {
         const data = await res.json();
         setStatus(data.status);
-        const labels = { pause: "pausado", resume: "retomado", end: "encerrado" };
-        const srLabels = { pause: "Debate pausado", resume: "Debate retomado", end: "Debate finalizado" };
+        const labels = {
+          pause: t("debate.statusPaused"),
+          resume: t("debate.statusResumed"),
+          end: t("debate.statusEnded"),
+        };
+        const srLabels = {
+          pause: t("debate.paused"),
+          resume: t("debate.debateResumed"),
+          end: t("debate.debateFinished"),
+        };
         setStatusAnnouncement(srLabels[action]);
-        toast.info(`Debate ${labels[action]}.`);
+        toast.info(t("debate.debateActionToast", { action: labels[action] }));
       }
     } catch {
-      toast.error("Erro ao controlar debate.");
+      toast.error(t("debate.errorControl"));
     }
   };
 
@@ -213,8 +222,8 @@ export default function DebateInterface({
       {/* Header */}
       <div className="border-b border-gray-700/50 pb-4 mb-4">
         <h1 className="text-lg font-semibold text-white mb-2">{topic}</h1>
-        <aside aria-label="Participantes do debate">
-          <h2 className="sr-only">Participantes</h2>
+        <aside aria-label={t("debate.participantsAside")}>
+          <h2 className="sr-only">{t("debate.participantsHeading")}</h2>
           <div className="flex flex-wrap gap-2" role="list">
             {participants.map((p, i) => {
               const color = DEBATE_COLORS[i % DEBATE_COLORS.length];
@@ -235,12 +244,19 @@ export default function DebateInterface({
             })}
           </div>
         </aside>
-        <p className="text-xs text-muted-foreground mt-2" aria-label={`Round ${Math.min(Math.floor(currentTurn / participants.length) + 1, maxRounds)} de ${maxRounds}, Turno ${currentTurn} de ${totalTurns}${isComplete ? ", Debate encerrado" : ""}${isPaused ? ", Debate pausado" : ""}`}>
-          Round {Math.min(Math.floor(currentTurn / participants.length) + 1, maxRounds)}/{maxRounds}
+        <p className="text-xs text-muted-foreground mt-2" aria-label={t("debate.roundTurnLabel", {
+          round: String(Math.min(Math.floor(currentTurn / participants.length) + 1, maxRounds)),
+          maxRounds: String(maxRounds),
+          turn: String(currentTurn),
+          totalTurns: String(totalTurns),
+          endedSuffix: isComplete ? t("debate.ariaEndedSuffix") : "",
+          pausedSuffix: isPaused ? t("debate.ariaPausedSuffix") : "",
+        })}>
+          {t("debate.roundLabel")} {Math.min(Math.floor(currentTurn / participants.length) + 1, maxRounds)}/{maxRounds}
           {" · "}
-          Turno {currentTurn}/{totalTurns}
-          {isComplete && " · Debate encerrado"}
-          {isPaused && " · Debate pausado"}
+          {t("debate.turnLabel")} {currentTurn}/{totalTurns}
+          {isComplete && t("debate.roundEndedSuffix")}
+          {isPaused && t("debate.roundPausedSuffix")}
         </p>
       </div>
 
@@ -249,12 +265,12 @@ export default function DebateInterface({
         <div
           className="space-y-4 pb-4"
           role="log"
-          aria-label="Debate entre mentes"
+          aria-label={t("debate.debateLog")}
           aria-relevant="additions"
         >
           {messages.length === 0 && !isStreaming && (
             <p className="text-center text-muted-foreground py-8">
-              Clique em &quot;Proximo Turno&quot; para iniciar o debate.
+              {t("debate.startInstruction")}
             </p>
           )}
 
@@ -296,16 +312,16 @@ export default function DebateInterface({
 
       {/* Interject Input */}
       {showInterject && !isComplete && (
-        <div className="flex gap-2 mb-3" role="form" aria-label="Intervir no debate">
+        <div className="flex gap-2 mb-3" role="form" aria-label={t("debate.interjectFormLabel")}>
           <label htmlFor="interject-input" className="sr-only">
-            Sua mensagem para o debate
+            {t("debate.interjectSrLabel")}
           </label>
           <input
             id="interject-input"
             type="text"
             value={interjectText}
             onChange={(e) => setInterjectText(e.target.value)}
-            placeholder="Sua mensagem para o debate..."
+            placeholder={t("debate.interjectPlaceholder")}
             className="flex-1 rounded-lg bg-gray-800/60 border border-gray-700/50 px-3 py-2 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -319,18 +335,18 @@ export default function DebateInterface({
             onClick={handleInterject}
             disabled={!interjectText.trim()}
             className="min-h-11"
-            aria-label="Enviar interjeccao"
+            aria-label={t("debate.sendInterject")}
           >
-            Enviar
+            {t("debate.sendInterjectButton")}
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setShowInterject(false)}
             className="min-h-11"
-            aria-label="Cancelar interjeccao"
+            aria-label={t("debate.cancelInterject")}
           >
-            Cancelar
+            {t("debate.cancel")}
           </Button>
         </div>
       )}
@@ -338,7 +354,7 @@ export default function DebateInterface({
       {/* Controls */}
       <nav
         className="flex flex-wrap gap-2 pt-3 border-t border-gray-700/50"
-        aria-label="Controles do debate"
+        aria-label={t("debate.controlsLabel")}
         role="toolbar"
       >
         {!isComplete && (
@@ -347,9 +363,9 @@ export default function DebateInterface({
               onClick={handleNextTurn}
               disabled={isStreaming || isPaused}
               className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white min-h-11"
-              aria-label={isStreaming ? `Processando resposta de ${streamingMind?.name ?? "mente"}` : `Proximo turno — vez de ${currentMindName}`}
+              aria-label={isStreaming ? t("debate.processingResponseOf", { mindName: streamingMind?.name ?? t("debate.mindFallback") }) : t("debate.nextTurnAria", { mindName: currentMindName })}
             >
-              {isStreaming ? "Processando..." : "Proximo Turno"}
+              {isStreaming ? t("debate.processing") : t("debate.nextTurn")}
             </Button>
 
             <Button
@@ -360,7 +376,7 @@ export default function DebateInterface({
               aria-expanded={showInterject}
               aria-controls="interject-input"
             >
-              Intervir
+              {t("debate.interject")}
             </Button>
 
             {isPaused ? (
@@ -368,9 +384,9 @@ export default function DebateInterface({
                 variant="outline"
                 onClick={() => handleControlAction("resume")}
                 className="min-h-11"
-                aria-label="Retomar debate"
+                aria-label={t("debate.resumeAria")}
               >
-                Retomar
+                {t("debate.resume")}
               </Button>
             ) : (
               <Button
@@ -378,9 +394,9 @@ export default function DebateInterface({
                 onClick={() => handleControlAction("pause")}
                 disabled={isStreaming}
                 className="min-h-11"
-                aria-label="Pausar debate"
+                aria-label={t("debate.pauseAria")}
               >
-                Pausar
+                {t("debate.pause")}
               </Button>
             )}
 
@@ -389,9 +405,9 @@ export default function DebateInterface({
               onClick={() => handleControlAction("end")}
               disabled={isStreaming}
               className="min-h-11"
-              aria-label="Encerrar debate"
+              aria-label={t("debate.endAria")}
             >
-              Encerrar
+              {t("debate.end")}
             </Button>
           </>
         )}
@@ -401,9 +417,9 @@ export default function DebateInterface({
             variant="outline"
             onClick={() => (window.location.href = "/debate")}
             className="min-h-11"
-            aria-label="Criar novo debate"
+            aria-label={t("debate.newDebateAria")}
           >
-            Novo Debate
+            {t("debate.newDebate")}
           </Button>
         )}
       </nav>

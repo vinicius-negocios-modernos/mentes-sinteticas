@@ -60,7 +60,7 @@ export default function SharedConversationView({
           >
             <AvatarFallback
               className="text-sm font-semibold"
-              aria-label={`Avatar de ${mind.name}`}
+              aria-label={t("chat.avatarOf", { mindName: mind.name })}
               style={{
                 backgroundColor: "hsl(var(--primary) / 0.3)",
                 color: "hsl(var(--primary))",
@@ -116,7 +116,7 @@ export default function SharedConversationView({
           <div
             className="p-4 sm:p-6 space-y-6"
             role="log"
-            aria-label={`Conversa compartilhada com ${mind.name}`}
+            aria-label={t("sharing.sharedConversationLog", { mindName: mind.name })}
           >
             {messages.map((msg) => (
               <ChatMessage

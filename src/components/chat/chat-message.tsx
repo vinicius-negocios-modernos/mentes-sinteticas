@@ -193,7 +193,7 @@ export function ChatMessageLoading({ className }: ChatMessageLoadingProps) {
       </Avatar>
       <div
         className="bg-gray-800/40 p-4 rounded-2xl rounded-bl-none flex gap-2 items-center"
-        aria-label="A mente esta respondendo"
+        aria-label={t("chat.mindResponding")}
         role="status"
       >
         <div
@@ -252,10 +252,10 @@ function ChatMessageInner({
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success("Copiado!");
+      toast.success(t("chat.copied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Falha ao copiar texto.");
+      toast.error(t("chat.copyFailed"));
     }
   };
 
@@ -279,10 +279,10 @@ function ChatMessageInner({
       role="article"
       aria-label={
         isUser
-          ? "Mensagem do usuario"
+          ? t("chat.messageFromUser")
           : mindName
-            ? `Mensagem de ${mindName}`
-            : "Mensagem da mente"
+            ? t("chat.messageFrom", { mindName })
+            : t("chat.messageFromMind")
       }
       className={cn(
         "group flex gap-3",
@@ -300,10 +300,10 @@ function ChatMessageInner({
         }
         aria-label={
           isUser
-            ? "Avatar do usuario"
+            ? t("chat.userAvatar")
             : mindName
-              ? `Avatar de ${mindName}`
-              : "Avatar da mente"
+              ? t("chat.avatarOf", { mindName })
+              : t("chat.mindAvatarGeneric")
         }
       >
         <AvatarFallback
@@ -321,7 +321,7 @@ function ChatMessageInner({
           }
           aria-hidden="true"
         >
-          {isUser ? "EU" : mindName ? getInitials(mindName) : "MS"}
+          {isUser ? t("chat.userLabel") : mindName ? getInitials(mindName) : t("chat.defaultMindInitials")}
         </AvatarFallback>
       </Avatar>
 
@@ -435,7 +435,7 @@ function ChatMessageInner({
               size="sm"
               onClick={handleCopy}
               className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded-md"
-              aria-label="Copiar mensagem"
+              aria-label={t("chat.copyAriaLabel")}
             >
               {copied ? (
                 <svg

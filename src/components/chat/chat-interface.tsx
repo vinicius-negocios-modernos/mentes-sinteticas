@@ -74,7 +74,7 @@ export default function ChatInterface({
     initialMessages ?? [
       {
         role: "model",
-        text: `Ola. Eu sou a consciencia digital de **${mindName}**. Em que posso contribuir para sua estrategia hoje?`,
+        text: t("chat.initialGreeting", { mindName }),
         timestamp: new Date(),
       },
     ]
@@ -171,7 +171,7 @@ export default function ChatInterface({
       if (!response.ok) {
         // Try to parse error JSON, fall back to non-streaming
         const errorData = await response.json().catch(() => null);
-        const errorMsg = errorData?.error || "Erro ao processar mensagem.";
+        const errorMsg = errorData?.error || t("chat.fallbackError");
         throw new Error(errorMsg);
       }
 
@@ -190,7 +190,7 @@ export default function ChatInterface({
       // Read streaming response
       const reader = response.body?.getReader();
       if (!reader) {
-        throw new Error("Stream not available");
+        throw new Error(t("errors.streamUnavailable"));
       }
 
       const decoder = new TextDecoder();
@@ -283,9 +283,13 @@ export default function ChatInterface({
 
   const handleSend = () => sendPrompt();
 
-  const helperText = `${mindName} acessara seus ${
-    messages.length > 1 ? "arquivos de memoria" : "conhecimentos"
-  } para responder.`;
+  const helperText = t("chat.helperText", {
+    mindName,
+    context:
+      messages.length > 1
+        ? t("chat.helperMemory")
+        : t("chat.helperKnowledge"),
+  });
 
   // Show empty state when only the greeting message exists (no user messages yet)
   const showEmptyState = messages.length <= 1 && !isLoading && streamingText === null;
@@ -298,15 +302,15 @@ export default function ChatInterface({
       variant="inline"
       fallback={({ reset }) => (
         <div className="flex flex-col items-center justify-center h-[calc(100dvh-140px)] w-full max-w-4xl mx-auto glass-panel rounded-2xl p-8 text-center">
-          <p className="text-red-400 text-lg mb-2">Erro no chat</p>
+          <p className="text-red-400 text-lg mb-2">{t("chat.errorTitle")}</p>
           <p className="text-muted-foreground text-sm mb-4">
-            Ocorreu um erro na interface de chat. Tente reconectar.
+            {t("chat.errorDescription")}
           </p>
           <button
             onClick={reset}
             className="px-4 py-2 rounded-lg bg-purple-600/30 border border-purple-500/40 text-purple-200 hover:bg-purple-600/50 transition-colors"
           >
-            Tentar novamente
+            {t("chat.errorRetry")}
           </button>
         </div>
       )}
@@ -315,11 +319,11 @@ export default function ChatInterface({
         {/* Token usage warning banner */}
         {tokenWarning && (
           <div className="flex items-center justify-between gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-xs">
-            <span>Voce usou mais de 80% do seu limite diario de tokens.</span>
+            <span>{t("chat.tokenWarning")}</span>
             <button
               onClick={dismissTokenWarning}
               className="text-amber-400 hover:text-amber-200 shrink-0"
-              aria-label="Fechar aviso"
+              aria-label={t("chat.tokenWarningClose")}
             >
               x
             </button>
@@ -350,7 +354,7 @@ export default function ChatInterface({
                 suggestedPrompts={suggestedPrompts}
               />
             ) : (
-              <div className="p-6 space-y-6" role="log" aria-live="polite" aria-relevant="additions" aria-label={`Mensagens da conversa com ${mindName}`}>
+              <div className="p-6 space-y-6" role="log" aria-live="polite" aria-relevant="additions" aria-label={t("chat.conversationMessagesLabel", { mindName })}>
                 {messages.map((msg, idx) => (
                   <ChatMessage
                     key={idx}
@@ -387,7 +391,7 @@ export default function ChatInterface({
                   />
                 )}
                 {/* Show loading indicator when waiting for first token */}
-                <div role="status" aria-live="polite" aria-label={isLoading && (streamingText === null || streamingText.length === 0) ? "A mente esta respondendo..." : undefined}>
+                <div role="status" aria-live="polite" aria-label={isLoading && (streamingText === null || streamingText.length === 0) ? t("chat.mindRespondingLive") : undefined}>
                   {isLoading &&
                     (streamingText === null || streamingText.length === 0) && (
                       <ChatMessageLoading />
@@ -417,7 +421,7 @@ export default function ChatInterface({
                 borderStyle: "solid",
                 borderColor: "hsl(var(--primary) / 0.4)",
               }}
-              aria-label="Ir para o final"
+              aria-label={t("chat.scrollToBottom")}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
