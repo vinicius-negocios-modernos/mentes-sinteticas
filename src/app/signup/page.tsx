@@ -20,7 +20,7 @@ export default async function SignupPage({
         const email = formData.get("email");
         const password = formData.get("password");
         if (!email || typeof email !== "string" || !password || typeof password !== "string") {
-            redirect(`/signup?error=${encodeURIComponent("Email e senha sao obrigatorios.")}`);
+            redirect(`/signup?error=${encodeURIComponent(t("auth.requiredFields"))}`);
         }
 
         // Create user via signup API
@@ -32,7 +32,7 @@ export default async function SignupPage({
 
         if (!res.ok) {
             const data = await res.json();
-            redirect(`/signup?error=${encodeURIComponent(data.error || "Erro ao criar conta.")}`);
+            redirect(`/signup?error=${encodeURIComponent(data.error || t("auth.createAccountError"))}`);
         }
 
         // Auto-login after successful signup
@@ -44,7 +44,7 @@ export default async function SignupPage({
             });
         } catch (err) {
             if (err instanceof AuthError) {
-                redirect(`/login?error=${encodeURIComponent("Conta criada. Faca login.")}`);
+                redirect(`/login?error=${encodeURIComponent(t("auth.accountCreatedLogin"))}`);
             }
             throw err;
         }

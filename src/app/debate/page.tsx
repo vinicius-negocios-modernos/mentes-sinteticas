@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { t } from "@/lib/i18n";
 import DebateSetup from "@/components/debate/debate-setup";
 
 export const metadata = {
@@ -9,7 +10,7 @@ export const metadata = {
 
 export default function DebatePage() {
   return (
-    <main className="min-h-dvh bg-background text-foreground flex flex-col" aria-label="Configuracao de debate">
+    <main className="min-h-dvh bg-background text-foreground flex flex-col" aria-label={t("debate.setupPageLabel")}>
       <header className="w-full flex items-center justify-between px-6 py-4">
         <h1
           className="text-3xl font-bold tracking-tighter text-transparent bg-clip-text"
@@ -19,23 +20,22 @@ export default function DebatePage() {
             WebkitTextFillColor: "transparent",
           }}
         >
-          Debates
+          {t("debate.pageTitle")}
         </h1>
-        <nav aria-label="Navegacao">
+        <nav aria-label={t("debate.pageNavLabel")}>
           <Link
             href="/"
             className="text-sm text-muted-foreground hover:text-white transition-colors min-h-11 flex items-center px-3"
-            aria-label="Voltar para pagina inicial"
+            aria-label={t("debate.backToHomeAria")}
           >
-            Voltar
+            {t("debate.back")}
           </Link>
         </nav>
       </header>
 
       <section className="flex-1 flex flex-col items-center justify-start px-6 py-8" aria-labelledby="debate-intro">
         <p id="debate-intro" className="text-gray-400 text-center mb-8 max-w-lg">
-          Selecione 2 a 4 mentes e defina um topico. Elas debaterao entre si em
-          turnos — e voce controla o ritmo.
+          {t("debate.pageIntro")}
         </p>
         <DebateSetup />
       </section>

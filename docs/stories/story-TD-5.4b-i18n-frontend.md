@@ -1,6 +1,6 @@
 # Story TD-5.4b — i18n frontend: strings PT-BR via t() (UX-5 + SYS-13 backend resto)
 
-**Status:** InProgress
+**Status:** Done
 **Epic:** [Resolução de Débitos Técnicos](epic-technical-debt.md) · **Wave:** W5-G (carry-forward de TD-5.4)
 **Prioridade:** P3 · **Estimativa:** ~18–28h
 **Parent:** [TD-5.4](story-TD-5.4-config-i18n-hardening.md) (carry-forward explícito)
@@ -108,26 +108,26 @@ O sistema é **CUSTOM single-locale** — não usa next-intl nem bibliotecas ext
 
 ### Incremento 2 — Mind, auth, onboarding, shared e layout
 
-- [ ] **2.1** Mapear strings PT-BR nos arquivos de mind (4), auth (2), onboarding (1), layout/shared (~7), páginas (6); identificar chaves faltantes por namespace
-- [ ] **2.2** Adicionar chaves faltantes ao pt-BR.ts nos namespaces `auth`, `mindProfile`, `offline`, `home`, `errors`, `common` (criar sub-chaves onde necessário; não criar novos namespaces de topo sem necessidade)
-- [ ] **2.3** Migrar strings em componentes de mind para `t()` (4 arquivos)
-- [ ] **2.4** Migrar strings em componentes de auth e onboarding para `t()` (3 arquivos)
-- [ ] **2.5** Migrar strings em componentes de layout, shared e páginas para `t()` (~13 arquivos)
-- [ ] **2.6** `npm test` + `npm run lint` verdes
+- [x] **2.1** Mapear strings PT-BR nos arquivos de mind (4), auth (2), onboarding (1), layout/shared (~7), páginas (6); identificar chaves faltantes por namespace
+- [x] **2.2** Adicionar chaves faltantes ao pt-BR.ts nos namespaces `auth`, `offline`, `home`, `errors`, `common`, `debate` + novo namespace `onboarding` (byte-identical)
+- [x] **2.3** Migrar strings em componentes de mind para `t()` (`mind-avatar.tsx` único com string hardcoded; demais já migrados na infra TD-5.4)
+- [x] **2.4** Migrar strings em componentes de auth e onboarding para `t()` (`login/page.tsx`, `signup/page.tsx`, `onboarding-dialog.tsx`)
+- [x] **2.5** Migrar strings em componentes de layout, shared e páginas para `t()` (`layout.tsx`, `page.tsx`, `error.tsx`, `error-boundary.tsx`, `home-empty-state.tsx`, `breadcrumb.tsx`, `search-empty-state.tsx`, `offline/page.tsx`, `debate/page.tsx`, `debate/[debateId]/page.tsx`, `chat/[mindId]/error.tsx`)
+- [x] **2.6** `npm test` (447/447 PASS) + `npm run lint` (exit 0) verdes; `tsc --noEmit` 0 erros; `npm run build` PASS; zero key-leak (67/67 chaves resolvem)
 
 ### Incremento 3 — SYS-13 backend restante
 
-- [ ] **3.1** Listar todas as strings hardcoded nas 5 rotas backend; mapear contra namespace `api` existente em pt-BR.ts
-- [ ] **3.2** Adicionar chaves faltantes ao namespace `api` no pt-BR.ts (strings de debate, share, memories — byte-identical)
-- [ ] **3.3** Importar `t` de `src/lib/i18n` nas 5 rotas e substituir strings hardcoded por chamadas `t('api.*')`
-- [ ] **3.4** Verificar se há testes de contrato de resposta nessas rotas; se sim, confirmar que passam sem mudança; se não, documentar ausência (não criar testes novos — escopo de TD-5.5)
-- [ ] **3.5** `npm test` + `npm run lint` verdes
+- [x] **3.1** Listar todas as strings hardcoded nas 5 rotas backend; mapear contra namespace `api` existente em pt-BR.ts
+- [x] **3.2** Adicionar chaves faltantes ao namespace `api` no pt-BR.ts (strings de debate, share, memories — byte-identical)
+- [x] **3.3** Importar `t` de `src/lib/i18n` nas 5 rotas e substituir strings hardcoded por chamadas `t('api.*')`
+- [x] **3.4** Verificar se há testes de contrato de resposta nessas rotas; nenhum teste de rota asserta esses textos (apenas `lib/validations/debate.ts` e `lib/ai/debate.ts` têm testes, escopo diferente). Ausência documentada — não criados testes novos (escopo TD-5.5)
+- [x] **3.5** `npm test` (447/447 PASS) + `npm run lint` (exit 0) verdes; `tsc --noEmit` 0 erros; `npm run build` PASS
 
 ### Fechamento
 
-- [ ] **4.1** Confirmar zero strings PT-BR user-facing hardcoded em `src/components` e `src/app` (exceto OG images server-only)
-- [ ] **4.2** Confirmar zero strings PT-BR hardcoded nas 5 rotas backend de escopo
-- [ ] **4.3** Atualizar esta story: checkboxes, File List e status
+- [x] **4.1** Confirmar zero strings PT-BR user-facing hardcoded em `src/components` e `src/app` (exceto OG images server-only)
+- [x] **4.2** Confirmar zero strings PT-BR hardcoded nas 5 rotas backend de escopo
+- [x] **4.3** Atualizar esta story: checkboxes, File List e status
 
 ---
 
@@ -168,12 +168,12 @@ O sistema é **CUSTOM single-locale** — não usa next-intl nem bibliotecas ext
 
 ## Definition of Done
 
-- [ ] Zero strings PT-BR user-facing hardcoded em `src/components/` e `src/app/` (exceto OG images server-only e strings de sistema como class names, atributos não-visíveis)
-- [ ] Zero strings PT-BR hardcoded nas 5 rotas backend de escopo (`debate/route.ts`, `debate/[debateId]/turn/route.ts`, `conversations/[id]/share/route.ts`, `memories/route.ts`, `memories/[id]/route.ts`)
-- [ ] `t('namespace.key')` retorna texto byte-identical ao hardcoded anterior para cada chave migrada (verificado por revisão de código + testes passando)
-- [ ] `npm test` verde (358 testes mínimo, sem regressões)
-- [ ] `npm run lint` exit 0
-- [ ] File List atualizado com todos os arquivos modificados
+- [x] Zero strings PT-BR user-facing hardcoded em `src/components/` e `src/app/` (exceto OG images server-only e strings de sistema como class names, atributos não-visíveis)
+- [x] Zero strings PT-BR hardcoded nas 5 rotas backend de escopo (`debate/route.ts`, `debate/[debateId]/turn/route.ts`, `conversations/[id]/share/route.ts`, `memories/route.ts`, `memories/[id]/route.ts`) — restam apenas 2 strings de prompt de IA (não user-facing) e 1 check `msg.includes("nao encontrada")` (lógica de service-passthrough, não literal de resposta), todos intencionalmente preservados
+- [x] `t('namespace.key')` retorna texto byte-identical ao hardcoded anterior para cada chave migrada (verificado por revisão de código + testes passando + key-leak test via `t()` real, 23/23 resolvem)
+- [x] `npm test` verde (447/447, sem regressões)
+- [x] `npm run lint` exit 0
+- [x] File List atualizado com todos os arquivos modificados
 
 ---
 
@@ -203,7 +203,38 @@ O sistema é **CUSTOM single-locale** — não usa next-intl nem bibliotecas ext
 - `src/components/debate/debate-message.tsx`
 - `src/components/debate/debate-setup.tsx`
 
-**A ser modificado (estimado) — Inc 2/3:**
+**Increment 2 — modificados (mind/auth/onboarding/layout/shared/pages frontend):**
+- `src/lib/i18n/messages/pt-BR.ts` — +~45 chaves: `common` (skip/nav/breadcrumb/searchEmpty ×3), `home` (selectMind/knowledgeBase card ×4 + fileSearchActive), `auth` (invalidCredentials/createAccountError/accountCreatedLogin), novo namespace `onboarding` (14 chaves), `offline.pageDescriptionFull`, `debate` (5 page-level chaves), `errors` (10 chaves error/boundary/chat-error)
+- `src/components/minds/mind-avatar.tsx` — `Avatar de {name}` → reuso `chat.avatarOf`
+- `src/app/login/page.tsx` — redirects de erro via `auth.requiredFields`/`auth.invalidCredentials`
+- `src/app/signup/page.tsx` — redirects de erro via `auth.requiredFields`/`auth.createAccountError`/`auth.accountCreatedLogin`
+- `src/components/onboarding/onboarding-dialog.tsx` — 3 steps + footer/aria via novo namespace `onboarding`
+- `src/app/layout.tsx` — skip link, nav aria, botão Sair (namespace `common`); metadata OG/SEO intacta (out of scope)
+- `src/app/page.tsx` — cards Selecionar Mente / Base de Conhecimento via `home.*`
+- `src/app/error.tsx` — fallback global via `errors.*`
+- `src/components/error-boundary.tsx` — fallback via `errors.*`
+- `src/components/home-empty-state.tsx` — reuso `home.emptyState*`
+- `src/app/offline/page.tsx` — `offline.pageTitle` + `offline.pageDescriptionFull`; metadata.title intacta (out of scope)
+- `src/app/debate/page.tsx` — header/intro/aria via `debate.*`; metadata intacta (out of scope)
+- `src/app/debate/[debateId]/page.tsx` — main aria via `debate.viewPageLabel`; metadata intacta (out of scope)
+- `src/app/chat/[mindId]/error.tsx` — fallback via `errors.*`
+- `src/components/ui/breadcrumb.tsx` — aria via `common.breadcrumbNav`
+- `src/components/ui/search-empty-state.tsx` — via `common.searchEmpty*`
+- `src/components/debate/debate-setup.tsx` — removido import de tipo não usado `DebateParticipantInfo` (limpeza do warning LOW do gate Inc-1)
+
+**Increment 3 — modificados (SYS-13 backend restante, 5 rotas):**
+- `src/lib/i18n/messages/pt-BR.ts` — +23 chaves no namespace `api` (debate ×9, share ×3, memory ×8 + reuso de `sessionExpired`/`conversationNotFound`), todas byte-idênticas
+- `src/app/api/debate/route.ts` — 3 strings migradas (`sessionExpired` reuso, `debateRateLimited` interpolada, `debateCreateError`); `{ error: msg }` (service-passthrough) e check `msg.includes("nao encontrada")` preservados
+- `src/app/api/debate/[debateId]/turn/route.ts` — 9 strings de resposta migradas; **2 strings de prompt de IA (turnInstruction, L180-181) intencionalmente LEFT** (instruções para o Gemini, nunca retornadas ao cliente — migrar arriscaria alterar comportamento do modelo)
+- `src/app/api/conversations/[id]/share/route.ts` — 6 ocorrências migradas (`sessionExpired` ×2, `conversationNotFound` ×2 reuso, `shareRateLimited`, `shareError`, `unshareError`)
+- `src/app/api/memories/route.ts` — 5 strings migradas (`authRequired` ×2, `memoryMindIdRequired`, `memoryConfirmRequired`, `memoryListError`, `memoryBulkDeleteError`)
+- `src/app/api/memories/[id]/route.ts` — 4 strings migradas (`authRequired`, `memoryIdRequired`, `memoryNotFound`, `memoryDeleteError`)
+
+**Sem alteração (já 100% migrados na infra TD-5.4, zero string hardcoded):** `mind-profile-hero.tsx`, `mind-profile-details.tsx`, `mind-knowledge-sources.tsx`, `mind-conversation-starters.tsx`, `mind-card.tsx`, `mind-tag.tsx`, `memory-panel.tsx`, `soundscape-controls.tsx`, `onboarding-wrapper.tsx`.
+
+**Excluídos do escopo (server-only / SEO-OG metadata):** `mind/[slug]/page.tsx` (generateMetadata + JSON-LD), `shared/[token]/page.tsx` (generateMetadata + OG), blocos `metadata` de `layout.tsx`/`debate/page.tsx`/`debate/[debateId]/page.tsx`/`offline/page.tsx`, e os `*opengraph-image.tsx`/`apple-icon.tsx`.
+
+**A ser modificado (estimado) — Inc 3:**
 - `src/lib/i18n/messages/pt-BR.ts` — adição de chaves faltantes em namespaces existentes (todos os incrementos)
 - `src/components/chat/*.tsx` — migração de strings para `t()` (Inc 1)
 - `src/components/debate/*.tsx` — migração de strings para `t()` (Inc 1)
@@ -275,6 +306,38 @@ The TD-5.5 a11y/interface suites assert exact strings and all pass in the 447/44
 
 ---
 
+### Increments 2 + 3 — Mind/auth/onboarding/layout frontend + SYS-13 backend (combined gate) — **PASS** (Quinn @qa, 2026-05-31)
+
+**Gate file:** `docs/qa/gates/TD-5.4b-inc2-3.yml` · **Story status:** InReview → **Done** (completes TD-5.4b)
+
+**Scope gated together:** Inc 2 (15 frontend files, 67 keys used) + Inc 3 (5 backend API routes, 23 keys) — both in working tree, uncommitted.
+
+**Quality gates (all green):**
+
+| Gate | Command | Result |
+|------|---------|--------|
+| Tests | `vitest --maxWorkers=2 --run` | **447/447 PASS** (40 suites) |
+| Build | `npm run build` | **PASS** |
+| Lint | `npm run lint` | **exit 0** (0 errors, 8 warnings, all pre-existing) |
+| Typecheck | `npx tsc --noEmit` | **0 errors** |
+
+**Key-leak check (CRITICAL — primary failure mode): PASS.**
+Extracted every `t('...')` key from the Inc-2 frontend files AND Inc-3 route files; resolved each through the real `t()` function (vitest harness; leak = `t(key) === key`). **Inc 2: 67/67 resolve. Inc 3: 23/23 resolve. → 90/90 keys resolve, 0 leaks.** No dot-path can render to the UI nor surface as a dot-path in an API error response to clients. (Regex also surfaced bare `email`/`password`/`mindId` — confirmed FALSE POSITIVES from `formData.get(...)`, not `t()` keys.)
+
+**Byte-identical spot-check (12+ strings, frontend + backend): all EXACT.**
+- Frontend: `auth.requiredFields`="Email e senha sao obrigatorios.", `auth.invalidCredentials`="Credenciais invalidas.", `auth.accountCreatedLogin`="Conta criada. Faca login." ✓ ; `onboarding.step1Title`="Bem-vindo ao Atheneum" + skip/start/previous/next ✓ ; `onboarding.stepProgress` interpolates "Passo 1 de 3" (orig `` `Passo ${currentStep+1} de ${STEPS.length}` ``) ✓ ; `debate.pageIntro` em-dash "...em turnos — e voce controla o ritmo." ✓
+- Backend: `api.sessionExpired` ✓ ; `api.debateRateLimited` interpolated template matches original and call-site passes `maxAllowed`+`retryAfter` (param names match → no placeholder leak) ✓ ; `api.debateCompleted` em-dash "Debate concluido — todos os rounds foram completados." ✓ ; `api.memoryNotFound`/`memoryDeleteError`/`memoryListError` ✓ ; `api.memoryConfirmRequired` preserves literal `{ confirm: true }` ✓
+
+**AI-prompt strings LEFT (Inc 3): CONFIRMED correct.** The 2 `turnInstruction` template literals (turn/route.ts L180-181) feed `{ role: "user", content: turnInstruction }` (L185) → sent to Gemini, never returned to client. Correctly NOT migrated — migrating Gemini prompts is out of scope / would risk altering model behavior.
+
+**Server-only exclusions (Inc 2): CONFIRMED correct.** `layout.tsx` `metadata` object (title/description/OG, L32-82) uses plain string literals, NOT routed through client `t()`. Only runtime user-facing strings (`common.skipToContent`/`accountNav`/`signOut`) use `t()`. OG/metadata/generateMetadata correctly excluded.
+
+**Coverage sanity: bounded-complete.** Spot-grepped Inc-2 (page.tsx, onboarding-dialog, error.tsx) + Inc-3 (debate/route.ts, share/route.ts). Remaining literals all non-user-facing: JSX comments, TS type annotations, Zod error passthrough (`{ error: errors }`), `console.error` log labels.
+
+**Verdict: PASS** — zero key-leak (90/90 resolve), all byte-identical spot-checks EXACT, AI-prompt strings correctly left, server-only metadata correctly excluded, all CI gates green. **TD-5.4b COMPLETE (Inc 1+2+3).** Status: InReview → Done.
+
+---
+
 ## Change Log
 
 | Date | Version | Description | Author |
@@ -283,3 +346,6 @@ The TD-5.5 a11y/interface suites assert exact strings and all pass in the 447/44
 | 2026-05-31 | 1.1.0 | Validated GO (10/10) — Status: Draft → Ready. Byte-identical AC testável; Inc 1 (13 arquivos chat/debate) independentemente shippable; OG images corretamente excluídas. Recomendado 3 gates incrementais. | @po |
 | 2026-05-31 | 1.2.0 | Increment 1 implementado (YOLO, byte-identical). Status: Ready → InProgress. 13 arquivos chat/debate migrados para `t()`; ~70 chaves novas em `chat`/`sharing`/`debate` com texto byte-idêntico. Verificação: `vitest` 447/447 PASS (rede de segurança snapshot/a11y verde), `tsc --noEmit` 0 erros, `eslint` 0 erros, `npm run build` PASS. Zero key-leak (171 chaves usadas resolvem para string). | @dev |
 | 2026-05-31 | 1.3.0 | **QA Gate Increment 1 — PASS** (Quinn @qa). Tests 447/447, build PASS, lint exit 0, tsc 0 erros. Key-leak: 165 chaves verificadas via `t()` real → 165 resolvem → 0 leaks. 10 spot-checks byte-identical EXATOS (incl. `&quot;`→`"` em startInstruction e split mindFallback/mindFallbackCap). Coverage completa nos 13 arquivos. 1 warning LOW não-bloqueante (import de tipo `DebateParticipantInfo` não usado em debate-setup.tsx). Gate: `docs/qa/gates/TD-5.4b-inc1.yml`. Status permanece InProgress (Inc 2/3 pendentes). | @qa |
+| 2026-05-31 | 1.5.0 | **Increment 3 implementado (SYS-13 backend restante — ÚLTIMO incremento)** (YOLO, byte-identical). 5 rotas backend migradas (`debate/route.ts`, `debate/[debateId]/turn/route.ts`, `conversations/[id]/share/route.ts`, `memories/route.ts`, `memories/[id]/route.ts`); +23 chaves novas no namespace `api` (debate ×9, share ×3, memory ×8) com reuso de `sessionExpired`/`conversationNotFound` existentes. 27 ocorrências de string user-facing migradas para `t('api.*')`. **2 strings de prompt de IA (turnInstruction) intencionalmente LEFT** — instruções de sistema/usuário para o Gemini, nunca retornadas ao cliente; migrá-las arriscaria alterar comportamento do modelo (constraint da story). Check `msg.includes("nao encontrada")` e `{ error: msg }` (service-passthrough) preservados — não são literais de resposta hardcoded. Sem testes de contrato de rota para essas 5 rotas (apenas `lib/validations/debate` e `lib/ai/debate` têm testes, escopo diferente) — ausência documentada, sem testes novos (TD-5.5). Verificação: `vitest` 447/447 PASS, `tsc --noEmit` 0 erros, `eslint` exit 0 (0 errors, 8 warnings pré-existentes), `npm run build` PASS. Key-leak: 23/23 chaves novas resolvem via `t()` real → 0 leaks; byte-identical spot-checks EXATOS (interpolação debateRateLimited, literal `{ confirm: true }` em memoryConfirmRequired, em-dash em debateCompleted). **TD-5.4b COMPLETA (Inc 1+2+3).** Status: InProgress → InReview. | @dev |
+| 2026-05-31 | 1.6.0 | **QA Gate Increments 2+3 (combined) — PASS** (Quinn @qa). Gated Inc 2 (15 frontend files, 67 keys) + Inc 3 (5 backend routes, 23 keys) together. Tests 447/447 PASS, build PASS, lint exit 0 (8 pre-existing warnings), tsc 0 errors. Key-leak: 90/90 keys resolve via real `t()` (Inc2 67/67 + Inc3 23/23) → 0 leaks; no dot-path can surface in UI or API error responses. Byte-identical spot-check (12+ strings, frontend+backend) all EXACT — incl. interpolated `debateRateLimited` (call-site param names match template), em-dash in `debate.pageIntro`/`api.debateCompleted`, literal `{ confirm: true }` in `memoryConfirmRequired`. 2 AI-prompt `turnInstruction` strings correctly LEFT unmigrated (Gemini prompts, never returned to client). Server-only OG/metadata correctly excluded from client `t()`. Coverage bounded-complete. Gate: `docs/qa/gates/TD-5.4b-inc2-3.yml`. **TD-5.4b COMPLETE.** Status: InReview → Done. | @qa |
+| 2026-05-31 | 1.4.0 | **Increment 2 implementado** (YOLO, byte-identical). 15 arquivos frontend migrados (mind-avatar, login, signup, onboarding-dialog, layout, page, error, error-boundary, home-empty-state, offline, debate page, debate/[debateId], chat/[mindId]/error, breadcrumb, search-empty-state); ~45 chaves novas em `common`/`home`/`auth`/`offline`/`debate`/`errors` + novo namespace `onboarding` (14 chaves), todas byte-idênticas. Reuso de chaves existentes onde aplicável (`chat.avatarOf`, `auth.requiredFields`, `home.*`, `offline.pageTitle`, `debate.pageTitle`/`back`, `errors.tryAgain`/`backToHome`). Cleanup: removido import de tipo `DebateParticipantInfo` não usado em debate-setup.tsx (warning LOW do gate Inc-1 — agora 8 warnings vs 9). 9 arquivos já 100% migrados na infra TD-5.4 (sem alteração). OG/SEO metadata e server-only OG images corretamente excluídos. Verificação: `vitest` 447/447 PASS, `tsc --noEmit` 0 erros, `eslint` exit 0 (0 errors, 8 warnings pré-existentes), `npm run build` PASS. Key-leak: 67/67 chaves usadas resolvem via `t()` real → 0 leaks. Spot-check byte-identical de 9 strings EXATO (incl. em-dash em pageIntro, `--` em onboarding, interpolação stepProgress/searchEmpty/avatarOf). Status permanece InProgress (Inc 3 backend pendente). | @dev |

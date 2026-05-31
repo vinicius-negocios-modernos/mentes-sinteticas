@@ -7,6 +7,7 @@
 import { auth } from "@/lib/auth";
 import { deleteMemory } from "@/lib/services/mind-memories";
 import { logger } from "@/lib/logger";
+import { t } from "@/lib/i18n";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -21,7 +22,7 @@ export async function DELETE(
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Autenticacao necessaria." },
+        { error: t("api.authRequired") },
         { status: 401 }
       );
     }
@@ -30,7 +31,7 @@ export async function DELETE(
 
     if (!id) {
       return Response.json(
-        { error: "ID da memoria e obrigatorio." },
+        { error: t("api.memoryIdRequired") },
         { status: 400 }
       );
     }
@@ -39,7 +40,7 @@ export async function DELETE(
 
     if (!deleted) {
       return Response.json(
-        { error: "Memoria nao encontrada." },
+        { error: t("api.memoryNotFound") },
         { status: 404 }
       );
     }
@@ -51,7 +52,7 @@ export async function DELETE(
       error instanceof Error ? error : new Error(String(error))
     );
     return Response.json(
-      { error: "Erro ao excluir memoria." },
+      { error: t("api.memoryDeleteError") },
       { status: 500 }
     );
   }

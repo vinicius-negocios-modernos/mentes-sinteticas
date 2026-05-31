@@ -21,7 +21,7 @@ export default async function LoginPage({
         const email = formData.get("email");
         const password = formData.get("password");
         if (!email || typeof email !== "string" || !password || typeof password !== "string") {
-            redirect(`/login?error=${encodeURIComponent("Email e senha sao obrigatorios.")}&callbackUrl=${encodeURIComponent(returnTo)}`);
+            redirect(`/login?error=${encodeURIComponent(t("auth.requiredFields"))}&callbackUrl=${encodeURIComponent(returnTo)}`);
         }
 
         try {
@@ -32,7 +32,7 @@ export default async function LoginPage({
             });
         } catch (err) {
             if (err instanceof AuthError) {
-                redirect(`/login?error=${encodeURIComponent("Credenciais invalidas.")}&callbackUrl=${encodeURIComponent(returnTo)}`);
+                redirect(`/login?error=${encodeURIComponent(t("auth.invalidCredentials"))}&callbackUrl=${encodeURIComponent(returnTo)}`);
             }
             throw err;
         }

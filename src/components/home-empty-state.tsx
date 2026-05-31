@@ -1,4 +1,5 @@
 import EmptyState from "@/components/ui/empty-state";
+import { t } from "@/lib/i18n";
 
 /**
  * Empty state shown on the home page when no minds/conversations are available.
@@ -14,10 +15,10 @@ export default function HomeEmptyState() {
           <path d="m9 10 2 2 4-4" />
         </svg>
       }
-      title="Comece sua jornada intelectual"
-      description="Escolha uma mente sintetica acima para iniciar sua primeira conversa. Cada mente oferece uma perspectiva unica de um grande pensador."
+      title={t("home.emptyStateTitle")}
+      description={t("home.emptyStateDescription")}
       action={{
-        label: "Iniciar sua primeira conversa",
+        label: t("home.emptyStateAction"),
         href: "#minds-grid",
       }}
     />

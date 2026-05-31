@@ -9,6 +9,15 @@ export const messages = {
     appName: "Mentes Sinteticas",
     tagline: "O Atheneum Digital",
     loading: "Carregando...",
+    skipToContent: "Pular para conteudo principal",
+    accountNav: "Conta do usuario",
+    signOut: "Sair",
+    breadcrumbNav: "Breadcrumb",
+    searchEmptyTitle: "Nenhum resultado encontrado",
+    searchEmptyWithQuery:
+      'Nao encontramos resultados para "{query}". Tente ajustar os termos de busca.',
+    searchEmptyNoQuery:
+      "Nao encontramos resultados. Tente ajustar os termos de busca.",
   },
 
   home: {
@@ -27,6 +36,13 @@ export const messages = {
     emptyStateDescription:
       "Escolha uma mente sintetica acima para iniciar sua primeira conversa. Cada mente oferece uma perspectiva unica de um grande pensador.",
     emptyStateAction: "Iniciar sua primeira conversa",
+    selectMindCardTitle: "Selecionar Mente",
+    selectMindCardDescription:
+      "Escolha com quem voce quer debater hoje. De filosofos antigos a estrategistas modernos.",
+    knowledgeBaseCardTitle: "Base de Conhecimento",
+    knowledgeBaseCardDescription:
+      "Gerencie os textos sagrados e obras completas que alimentam as Mentes Sinteticas via vetorizacao.",
+    fileSearchActive: "Google Gemini File Search Ativo",
   },
 
   chat: {
@@ -116,6 +132,27 @@ export const messages = {
     signupSuccess:
       "Conta criada! Verifique seu email para confirmar o cadastro.",
     requiredFields: "Email e senha sao obrigatorios.",
+    invalidCredentials: "Credenciais invalidas.",
+    createAccountError: "Erro ao criar conta.",
+    accountCreatedLogin: "Conta criada. Faca login.",
+  },
+
+  onboarding: {
+    dialogLabel: "Onboarding - conheca o Mentes Sinteticas",
+    step1Title: "Bem-vindo ao Atheneum",
+    step1Description:
+      "As Mentes Sinteticas sao consciencias digitais inspiradas em grandes pensadores da humanidade. Cada mente possui conhecimentos, personalidade e estilo unicos -- como ter um mentor pessoal de outra era.",
+    step2Title: "Escolha uma Mente",
+    step2Description:
+      "Na pagina inicial, voce encontrara as mentes disponiveis. Cada uma representa um pensador diferente. Clique em qualquer nome para iniciar uma conversa com essa mente.",
+    step3Title: "Inicie uma Conversa",
+    step3Description:
+      "Digite sua pergunta ou escolha uma sugestao para comecar. A mente respondera com base em seus conhecimentos originais. Suas conversas ficam salvas para voce retomar quando quiser.",
+    stepProgress: "Passo {current} de {total}",
+    skip: "Pular",
+    previous: "Anterior",
+    start: "Comecar",
+    next: "Proximo",
   },
 
   footer: {
@@ -147,6 +184,8 @@ export const messages = {
     retry: "Tentar Novamente",
     offlineTag: "(offline)",
     chatDisabled: "Conecte-se para enviar mensagens",
+    pageDescriptionFull:
+      "Reconecte-se a internet para continuar usando o Mentes Sinteticas. Suas conversas recentes podem estar disponiveis no cache local.",
   },
 
   sharing: {
@@ -349,11 +388,30 @@ export const messages = {
     mindOptionSelected: " (selecionada)",
     creatingAria: "Criando debate, aguarde",
     startDebateAria: "Iniciar debate",
+    // Page-level (debate/page.tsx + debate/[debateId]/page.tsx)
+    setupPageLabel: "Configuracao de debate",
+    pageNavLabel: "Navegacao",
+    backToHomeAria: "Voltar para pagina inicial",
+    pageIntro:
+      "Selecione 2 a 4 mentes e defina um topico. Elas debaterao entre si em turnos — e voce controla o ritmo.",
+    viewPageLabel: "Debate em andamento",
   },
 
   errors: {
     generic: "Erro ao processar mensagem.",
     streamUnavailable: "Stream not available",
+    // Global error page (app/error.tsx) + ErrorBoundary fallback
+    somethingWentWrong: "Algo deu errado",
+    unexpectedRetry: "Ocorreu um erro inesperado. Tente novamente.",
+    unexpected: "Ocorreu um erro inesperado.",
+    tryAgain: "Tentar novamente",
+    backToHome: "Voltar ao inicio",
+    persistHint: "Se o problema persistir, tente recarregar a pagina.",
+    reloadPage: "Recarregar pagina",
+    // Chat error boundary (app/chat/[mindId]/error.tsx)
+    connectionInterrupted: "Conexao interrompida",
+    chatConnectFailed:
+      "Nao foi possivel conectar com esta mente. Tente novamente em alguns instantes.",
   },
 
   // Server-returned messages (backend API routes / services — SYS-13).
@@ -371,6 +429,33 @@ export const messages = {
     mindNotFound: "Mente nao encontrada.",
     apiKeyMissing: "Chave da API nao configurada.",
     chatProcessing: "Erro ao processar sua mensagem. Tente novamente.",
+    // Debate routes (api/debate/route.ts, api/debate/[debateId]/turn/route.ts)
+    debateRateLimited:
+      "Limite de {maxAllowed} debates por hora atingido. Tente novamente em {retryAfter} segundos.",
+    debateCreateError: "Erro ao criar debate. Tente novamente.",
+    debateNotFound: "Debate nao encontrado.",
+    debateAlreadyEnded: "Este debate ja foi encerrado.",
+    debatePaused: "Este debate esta pausado. Retome antes de continuar.",
+    debateNeedsParticipants: "Debate precisa de pelo menos 2 participantes.",
+    debateInterjectionRequired: "Mensagem de interjeccao obrigatoria.",
+    debateCompleted: "Debate concluido — todos os rounds foram completados.",
+    debateConversationNotFound: "Conversa do debate nao encontrada.",
+    debateTurnError: "Erro ao processar turno do debate. Tente novamente.",
+    // Share routes (api/conversations/[id]/share/route.ts)
+    shareRateLimited:
+      "Limite de compartilhamento atingido. Tente novamente em {retryAfter} segundos.",
+    shareError: "Erro ao compartilhar conversa.",
+    unshareError: "Erro ao revogar compartilhamento.",
+    // Memory routes (api/memories/route.ts, api/memories/[id]/route.ts)
+    authRequired: "Autenticacao necessaria.",
+    memoryMindIdRequired: "mindId e obrigatorio para exclusao em massa.",
+    memoryConfirmRequired:
+      "Confirmacao necessaria. Envie { confirm: true } no body.",
+    memoryListError: "Erro ao buscar memorias.",
+    memoryBulkDeleteError: "Erro ao excluir memorias.",
+    memoryIdRequired: "ID da memoria e obrigatorio.",
+    memoryNotFound: "Memoria nao encontrada.",
+    memoryDeleteError: "Erro ao excluir memoria.",
   },
 } as const;
 

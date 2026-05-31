@@ -3,6 +3,7 @@
 import React from "react";
 import * as Sentry from "@sentry/nextjs";
 import { logger } from "@/lib/logger";
+import { t } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -92,20 +93,20 @@ function DefaultFallback({
     <Card className="border-red-900/30 bg-gray-900/80 backdrop-blur-sm max-w-md w-full">
       <CardHeader>
         <CardTitle className="text-red-400 text-lg">
-          Algo deu errado
+          {t("errors.somethingWentWrong")}
         </CardTitle>
         <CardDescription className="text-gray-400">
-          {error.message || "Ocorreu um erro inesperado."}
+          {error.message || t("errors.unexpected")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          Se o problema persistir, tente recarregar a pagina.
+          {t("errors.persistHint")}
         </p>
       </CardContent>
       <CardFooter className="gap-3">
         <Button onClick={reset} variant="outline" size="sm">
-          Tentar novamente
+          {t("errors.tryAgain")}
         </Button>
         <Button
           onClick={() => window.location.reload()}
@@ -113,7 +114,7 @@ function DefaultFallback({
           size="sm"
           className="text-gray-400"
         >
-          Recarregar pagina
+          {t("errors.reloadPage")}
         </Button>
       </CardFooter>
     </Card>

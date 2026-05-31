@@ -1,6 +1,7 @@
 "use client";
 
 import EmptyState from "@/components/ui/empty-state";
+import { t } from "@/lib/i18n";
 
 interface SearchEmptyStateProps {
   query?: string;
@@ -22,11 +23,11 @@ export default function SearchEmptyState({ query, className }: SearchEmptyStateP
           <path d="M8 11h6" />
         </svg>
       }
-      title="Nenhum resultado encontrado"
+      title={t("common.searchEmptyTitle")}
       description={
         query
-          ? `Nao encontramos resultados para "${query}". Tente ajustar os termos de busca.`
-          : "Nao encontramos resultados. Tente ajustar os termos de busca."
+          ? t("common.searchEmptyWithQuery", { query })
+          : t("common.searchEmptyNoQuery")
       }
     />
   );

@@ -22,6 +22,7 @@ import {
   DEBATE_MAX_OUTPUT_TOKENS,
 } from "@/lib/ai/debate";
 import { logger } from "@/lib/logger";
+import { t } from "@/lib/i18n";
 
 export async function POST(
   request: Request,
@@ -49,7 +50,7 @@ export async function POST(
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Sessao expirada. Faca login novamente." },
+        { error: t("api.sessionExpired") },
         { status: 401 }
       );
     }
@@ -60,7 +61,7 @@ export async function POST(
     const debate = await getDebateById(debateId, userId);
     if (!debate) {
       return Response.json(
-        { error: "Debate nao encontrado." },
+        { error: t("api.debateNotFound") },
         { status: 404 }
       );
     }
@@ -84,14 +85,14 @@ export async function POST(
     // ── Check debate is active or in setup ────────────────────────────
     if (debate.status === "completed") {
       return Response.json(
-        { error: "Este debate ja foi encerrado." },
+        { error: t("api.debateAlreadyEnded") },
         { status: 400 }
       );
     }
 
     if (debate.status === "paused") {
       return Response.json(
-        { error: "Este debate esta pausado. Retome antes de continuar." },
+        { error: t("api.debatePaused") },
         { status: 400 }
       );
     }
@@ -104,7 +105,7 @@ export async function POST(
     const participants = await getDebateParticipants(debateId);
     if (participants.length < 2) {
       return Response.json(
-        { error: "Debate precisa de pelo menos 2 participantes." },
+        { error: t("api.debateNeedsParticipants") },
         { status: 400 }
       );
     }
@@ -113,7 +114,7 @@ export async function POST(
     if (action === "interject") {
       if (!userMessage || userMessage.trim().length === 0) {
         return Response.json(
-          { error: "Mensagem de interjeccao obrigatoria." },
+          { error: t("api.debateInterjectionRequired") },
           { status: 400 }
         );
       }
@@ -133,7 +134,7 @@ export async function POST(
       await updateDebateStatus(debateId, "completed");
       return Response.json({
         status: "completed",
-        message: "Debate concluido — todos os rounds foram completados.",
+        message: t("api.debateCompleted"),
       });
     }
 
@@ -147,7 +148,7 @@ export async function POST(
     const conversationId = debate.conversationId;
     if (!conversationId) {
       return Response.json(
-        { error: "Conversa do debate nao encontrada." },
+        { error: t("api.debateConversationNotFound") },
         { status: 500 }
       );
     }
@@ -252,7 +253,7 @@ export async function POST(
       error instanceof Error ? error : new Error(String(error))
     );
     return Response.json(
-      { error: "Erro ao processar turno do debate. Tente novamente." },
+      { error: t("api.debateTurnError") },
       { status: 500 }
     );
   }

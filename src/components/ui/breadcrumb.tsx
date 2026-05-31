@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 export interface BreadcrumbItem {
   label: string;
@@ -17,7 +18,7 @@ interface BreadcrumbProps {
  */
 export default function Breadcrumb({ items, className }: BreadcrumbProps) {
   return (
-    <nav aria-label="Breadcrumb" className={cn("text-sm", className)}>
+    <nav aria-label={t("common.breadcrumbNav")} className={cn("text-sm", className)}>
       <ol className="flex items-center gap-1.5 flex-wrap">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

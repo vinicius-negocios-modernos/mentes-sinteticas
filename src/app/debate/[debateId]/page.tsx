@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/debates";
 import { listByConversation } from "@/lib/services/messages";
 import DebateInterface from "@/components/debate/debate-interface";
+import { t } from "@/lib/i18n";
 import type { DebateStatus } from "@/lib/types";
 
 export const metadata = {
@@ -66,7 +67,7 @@ export default async function DebateViewPage({ params }: DebateViewPageProps) {
   }
 
   return (
-    <main className="min-h-dvh bg-background text-foreground flex flex-col px-6 py-4" aria-label="Debate em andamento">
+    <main className="min-h-dvh bg-background text-foreground flex flex-col px-6 py-4" aria-label={t("debate.viewPageLabel")}>
       <DebateInterface
         debateId={debateId}
         topic={debate.topic}

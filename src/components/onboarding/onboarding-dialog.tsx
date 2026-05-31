@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 // ---------------------------------------------------------------------------
 // Step content definitions
@@ -30,9 +31,8 @@ const STEPS: OnboardingStep[] = [
         <path d="m9 10 2 2 4-4" />
       </svg>
     ),
-    title: "Bem-vindo ao Atheneum",
-    description:
-      "As Mentes Sinteticas sao consciencias digitais inspiradas em grandes pensadores da humanidade. Cada mente possui conhecimentos, personalidade e estilo unicos -- como ter um mentor pessoal de outra era.",
+    title: t("onboarding.step1Title"),
+    description: t("onboarding.step1Description"),
   },
   {
     icon: (
@@ -42,9 +42,8 @@ const STEPS: OnboardingStep[] = [
         <path d="M2 12h20" />
       </svg>
     ),
-    title: "Escolha uma Mente",
-    description:
-      "Na pagina inicial, voce encontrara as mentes disponiveis. Cada uma representa um pensador diferente. Clique em qualquer nome para iniciar uma conversa com essa mente.",
+    title: t("onboarding.step2Title"),
+    description: t("onboarding.step2Description"),
   },
   {
     icon: (
@@ -55,9 +54,8 @@ const STEPS: OnboardingStep[] = [
         <path d="M16 10h.01" />
       </svg>
     ),
-    title: "Inicie uma Conversa",
-    description:
-      "Digite sua pergunta ou escolha uma sugestao para comecar. A mente respondera com base em seus conhecimentos originais. Suas conversas ficam salvas para voce retomar quando quiser.",
+    title: t("onboarding.step3Title"),
+    description: t("onboarding.step3Description"),
   },
 ];
 
@@ -100,7 +98,7 @@ export default function OnboardingDialog({
       <DialogContent
         showCloseButton={false}
         className="sm:max-w-md border-purple-500/20 bg-background/95 backdrop-blur-md"
-        aria-label="Onboarding - conheca o Mentes Sinteticas"
+        aria-label={t("onboarding.dialogLabel")}
       >
         <DialogHeader className="items-center text-center">
           {/* Step icon */}
@@ -118,7 +116,7 @@ export default function OnboardingDialog({
         </DialogHeader>
 
         {/* Progress dots */}
-        <div className="flex items-center justify-center gap-2 py-2" role="group" aria-label={`Passo ${currentStep + 1} de ${STEPS.length}`}>
+        <div className="flex items-center justify-center gap-2 py-2" role="group" aria-label={t("onboarding.stepProgress", { current: String(currentStep + 1), total: String(STEPS.length) })}>
           {STEPS.map((_, idx) => (
             <div
               key={idx}
@@ -143,7 +141,7 @@ export default function OnboardingDialog({
             onClick={onSkip}
             className="text-muted-foreground hover:text-white min-h-11"
           >
-            Pular
+            {t("onboarding.skip")}
           </Button>
 
           <div className="flex gap-2">
@@ -155,7 +153,7 @@ export default function OnboardingDialog({
                 onClick={handlePrevious}
                 className="border-purple-500/30 min-h-11"
               >
-                Anterior
+                {t("onboarding.previous")}
               </Button>
             )}
 
@@ -165,7 +163,7 @@ export default function OnboardingDialog({
               onClick={handleNext}
               className="bg-purple-600/80 hover:bg-purple-600 text-white border border-purple-500/40 min-h-11"
             >
-              {isLastStep ? "Comecar" : "Proximo"}
+              {isLastStep ? t("onboarding.start") : t("onboarding.next")}
             </Button>
           </div>
         </DialogFooter>

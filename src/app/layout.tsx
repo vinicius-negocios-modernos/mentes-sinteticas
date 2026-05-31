@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { auth } from "@/lib/auth";
+import { t } from "@/lib/i18n";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
@@ -117,7 +118,7 @@ export default async function RootLayout({
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-background focus:text-foreground focus:p-4 focus:rounded-md focus:ring-2 focus:ring-ring"
         >
-          Pular para conteudo principal
+          {t("common.skipToContent")}
         </a>
         <ThemeProvider
           attribute="class"
@@ -126,7 +127,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           {user && (
-            <nav aria-label="Conta do usuario" className="fixed top-0 right-0 z-50 p-2 sm:p-4 flex items-center gap-2 sm:gap-4">
+            <nav aria-label={t("common.accountNav")} className="fixed top-0 right-0 z-50 p-2 sm:p-4 flex items-center gap-2 sm:gap-4">
               <span className="text-xs text-gray-400 truncate max-w-[120px] sm:max-w-[200px] hidden sm:inline">
                 {user.email}
               </span>
@@ -139,7 +140,7 @@ export default async function RootLayout({
                   type="submit"
                   className="text-xs px-3 py-2.5 min-h-11 min-w-11 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
                 >
-                  Sair
+                  {t("common.signOut")}
                 </button>
               </form>
             </nav>

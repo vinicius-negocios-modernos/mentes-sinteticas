@@ -4,6 +4,7 @@ import {
   checkRateLimit,
   incrementRateLimit,
 } from "@/lib/services/rate-limiter";
+import { t } from "@/lib/i18n";
 
 /**
  * POST /api/conversations/[id]/share
@@ -22,7 +23,7 @@ export async function POST(
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Sessao expirada. Faca login novamente." },
+        { error: t("api.sessionExpired") },
         { status: 401 }
       );
     }
@@ -40,7 +41,9 @@ export async function POST(
     if (!rateLimitResult.allowed) {
       return Response.json(
         {
-          error: `Limite de compartilhamento atingido. Tente novamente em ${rateLimitResult.retryAfterSeconds} segundos.`,
+          error: t("api.shareRateLimited", {
+            retryAfter: String(rateLimitResult.retryAfterSeconds),
+          }),
         },
         { status: 429 }
       );
@@ -51,7 +54,7 @@ export async function POST(
 
     if (!result) {
       return Response.json(
-        { error: "Conversa nao encontrada ou acesso negado." },
+        { error: t("api.conversationNotFound") },
         { status: 404 }
       );
     }
@@ -71,7 +74,7 @@ export async function POST(
   } catch (error) {
     console.error("Share conversation error:", error);
     return Response.json(
-      { error: "Erro ao compartilhar conversa." },
+      { error: t("api.shareError") },
       { status: 500 }
     );
   }
@@ -94,7 +97,7 @@ export async function DELETE(
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Sessao expirada. Faca login novamente." },
+        { error: t("api.sessionExpired") },
         { status: 401 }
       );
     }
@@ -103,7 +106,7 @@ export async function DELETE(
 
     if (!success) {
       return Response.json(
-        { error: "Conversa nao encontrada ou acesso negado." },
+        { error: t("api.conversationNotFound") },
         { status: 404 }
       );
     }
@@ -112,7 +115,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Unshare conversation error:", error);
     return Response.json(
-      { error: "Erro ao revogar compartilhamento." },
+      { error: t("api.unshareError") },
       { status: 500 }
     );
   }

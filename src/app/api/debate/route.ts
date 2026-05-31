@@ -7,6 +7,7 @@ import {
   DEFAULT_LIMITS,
 } from "@/lib/services/rate-limiter";
 import { logger } from "@/lib/logger";
+import { t } from "@/lib/i18n";
 
 /** Rate limit config for debate creation: max 5 per hour. */
 const DEBATE_CREATE_LIMIT = {
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Sessao expirada. Faca login novamente." },
+        { error: t("api.sessionExpired") },
         { status: 401 }
       );
     }
@@ -47,7 +48,10 @@ export async function POST(request: Request) {
     if (!rateLimitResult.allowed) {
       return Response.json(
         {
-          error: `Limite de ${rateLimitResult.maxAllowed} debates por hora atingido. Tente novamente em ${rateLimitResult.retryAfterSeconds} segundos.`,
+          error: t("api.debateRateLimited", {
+            maxAllowed: String(rateLimitResult.maxAllowed),
+            retryAfter: String(rateLimitResult.retryAfterSeconds),
+          }),
         },
         { status: 429 }
       );
@@ -84,7 +88,7 @@ export async function POST(request: Request) {
       error instanceof Error ? error : new Error(String(error))
     );
     return Response.json(
-      { error: "Erro ao criar debate. Tente novamente." },
+      { error: t("api.debateCreateError") },
       { status: 500 }
     );
   }

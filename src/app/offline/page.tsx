@@ -1,4 +1,5 @@
 import { WifiOff } from "lucide-react";
+import { t } from "@/lib/i18n";
 import { OfflineRetryButton } from "./retry-button";
 
 export const metadata = {
@@ -22,12 +23,11 @@ export default function OfflinePage() {
         </div>
 
         <h1 className="text-2xl font-bold text-foreground mb-3">
-          Voce esta offline
+          {t("offline.pageTitle")}
         </h1>
 
         <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-          Reconecte-se a internet para continuar usando o Mentes Sinteticas.
-          Suas conversas recentes podem estar disponiveis no cache local.
+          {t("offline.pageDescriptionFull")}
         </p>
 
         <OfflineRetryButton />

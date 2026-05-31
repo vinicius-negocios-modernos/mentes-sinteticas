@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 interface MindAvatarProps {
   name: string;
@@ -36,7 +37,7 @@ export default function MindAvatar({
     return (
       <img
         src={avatarUrl}
-        alt={`Avatar de ${name}`}
+        alt={t("chat.avatarOf", { mindName: name })}
         className={cn(
           "rounded-full object-cover border-2 border-[#c9a55a]/30",
           sizeClasses[size],
@@ -49,7 +50,7 @@ export default function MindAvatar({
   return (
     <div
       role="img"
-      aria-label={`Avatar de ${name}`}
+      aria-label={t("chat.avatarOf", { mindName: name })}
       className={cn(
         "rounded-full flex items-center justify-center font-serif font-bold",
         "bg-gradient-to-br from-purple-900/60 to-amber-900/40",

@@ -1,5 +1,6 @@
 
 import { Suspense } from "react";
+import { t } from "@/lib/i18n";
 import { getMindsWithSlugs } from "./actions";
 import AppHeader from "@/components/layout/app-header";
 import AppFooter from "@/components/layout/app-footer";
@@ -20,13 +21,13 @@ async function MindCardsGrid() {
     <>
       {/* Card 1: Select Thinker */}
       <MindCard
-        title="Selecionar Mente"
-        description="Escolha com quem voce quer debater hoje. De filosofos antigos a estrategistas modernos."
+        title={t("home.selectMindCardTitle")}
+        description={t("home.selectMindCardDescription")}
         hoverColor="purple"
       >
         <div className="flex flex-wrap gap-2">
           {minds.length === 0 ? (
-            <span className="text-xs text-muted-foreground">Nenhuma mente encontrada</span>
+            <span className="text-xs text-muted-foreground">{t("home.noMindsFound")}</span>
           ) : (
             minds.map(mind => (
               <MindTag
@@ -41,13 +42,13 @@ async function MindCardsGrid() {
 
       {/* Card 2: Knowledge Base (File Search) */}
       <MindCard
-        title="Base de Conhecimento"
-        description="Gerencie os textos sagrados e obras completas que alimentam as Mentes Sinteticas via vetorizacao."
+        title={t("home.knowledgeBaseCardTitle")}
+        description={t("home.knowledgeBaseCardDescription")}
         hoverColor="cyan"
       >
         <div className="flex items-center gap-2 text-sm text-cyan-300">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-          Google Gemini File Search Ativo
+          {t("home.fileSearchActive")}
         </div>
       </MindCard>
     </>

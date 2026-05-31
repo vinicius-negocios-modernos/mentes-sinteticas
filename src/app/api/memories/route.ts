@@ -11,6 +11,7 @@ import {
   deleteAllMemoriesForMind,
 } from "@/lib/services/mind-memories";
 import { logger } from "@/lib/logger";
+import { t } from "@/lib/i18n";
 
 export async function GET(request: Request) {
   try {
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Autenticacao necessaria." },
+        { error: t("api.authRequired") },
         { status: 401 }
       );
     }
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
       error instanceof Error ? error : new Error(String(error))
     );
     return Response.json(
-      { error: "Erro ao buscar memorias." },
+      { error: t("api.memoryListError") },
       { status: 500 }
     );
   }
@@ -47,7 +48,7 @@ export async function DELETE(request: Request) {
 
     if (!session?.user?.id) {
       return Response.json(
-        { error: "Autenticacao necessaria." },
+        { error: t("api.authRequired") },
         { status: 401 }
       );
     }
@@ -57,7 +58,7 @@ export async function DELETE(request: Request) {
 
     if (!mindId) {
       return Response.json(
-        { error: "mindId e obrigatorio para exclusao em massa." },
+        { error: t("api.memoryMindIdRequired") },
         { status: 400 }
       );
     }
@@ -66,7 +67,7 @@ export async function DELETE(request: Request) {
     const body = await request.json().catch(() => ({}));
     if (!(body as { confirm?: boolean }).confirm) {
       return Response.json(
-        { error: "Confirmacao necessaria. Envie { confirm: true } no body." },
+        { error: t("api.memoryConfirmRequired") },
         { status: 400 }
       );
     }
@@ -80,7 +81,7 @@ export async function DELETE(request: Request) {
       error instanceof Error ? error : new Error(String(error))
     );
     return Response.json(
-      { error: "Erro ao excluir memorias." },
+      { error: t("api.memoryBulkDeleteError") },
       { status: 500 }
     );
   }

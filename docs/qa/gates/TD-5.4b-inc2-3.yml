@@ -1,0 +1,65 @@
+storyId: TD-5.4b
+increment: "2+3 (combined gate — completes story)"
+verdict: PASS
+gatedBy: Quinn (@qa)
+date: 2026-05-31
+scope:
+  inc2: "15 frontend files (mind/auth/onboarding/layout/pages) → t(); 67 keys used (common/home/auth/offline/debate/errors + new onboarding namespace)"
+  inc3: "5 backend API routes (debate, debate turn, share, memories ×2) → t('api.*'); 23 keys; 2 AI-prompt strings (turnInstruction) intentionally LEFT"
+
+qualityGates:
+  tests:
+    command: "vitest --maxWorkers=2 --run"
+    result: "447/447 PASS (40 suites)"
+  build:
+    command: "npm run build"
+    result: PASS
+  lint:
+    command: "npm run lint"
+    result: "exit 0 (0 errors, 8 warnings — all pre-existing; 9→8 after DebateParticipantInfo cleanup)"
+  typecheck:
+    command: "npx tsc --noEmit"
+    result: "0 errors"
+
+keyLeakCheck:
+  method: "Extracted every t('...') key from Inc-2 frontend files + Inc-3 route files; resolved each against real t() (vitest harness). Leak = t(key) === key."
+  inc2KeysChecked: 67
+  inc2Leaks: 0
+  inc3KeysChecked: 23
+  inc3Leaks: 0
+  result: "PASS — 90/90 keys resolve, 0 leaks. No dot-path can surface in UI or in API error responses to clients."
+  note: "Regex also surfaced bare 'email'/'password'/'mindId' — confirmed FALSE POSITIVES (from formData.get(...) matching 't' inside 'get('), not t() keys."
+
+byteIdenticalSpotCheck:
+  method: "Resolved current pt-BR.ts value via t() vs original literal from git HEAD. EXACT comparison (accents/punctuation/quotes/capitalization/interpolation)."
+  frontend:
+    - "auth.requiredFields = 'Email e senha sao obrigatorios.' (login L24, signup L23) — EXACT"
+    - "auth.invalidCredentials = 'Credenciais invalidas.' (login L35) — EXACT"
+    - "auth.accountCreatedLogin = 'Conta criada. Faca login.' (signup L47) — EXACT"
+    - "onboarding.step1Title = 'Bem-vindo ao Atheneum'; skip/start/previous/next = Pular/Comecar/Anterior/Proximo — EXACT"
+    - "onboarding.stepProgress interpolates 'Passo {current} de {total}' → 'Passo 1 de 3' (orig `Passo ${currentStep+1} de ${STEPS.length}`) — EXACT"
+    - "debate.pageIntro em-dash preserved '...em turnos — e voce controla o ritmo.' (orig L37-38) — EXACT"
+  backend:
+    - "api.sessionExpired = 'Sessao expirada. Faca login novamente.' — EXACT"
+    - "api.debateRateLimited interpolated 'Limite de {maxAllowed} debates por hora atingido. Tente novamente em {retryAfter} segundos.'; call-site passes maxAllowed+retryAfter (param names match template) — EXACT, no placeholder leak"
+    - "api.debateCompleted em-dash 'Debate concluido — todos os rounds foram completados.' (turn L136) — EXACT"
+    - "api.debatePaused / api.debateNeedsParticipants / api.debateAlreadyEnded — EXACT"
+    - "api.memoryNotFound='Memoria nao encontrada.', api.memoryDeleteError='Erro ao excluir memoria.', api.memoryListError='Erro ao buscar memorias.' — EXACT"
+    - "api.memoryConfirmRequired = 'Confirmacao necessaria. Envie { confirm: true } no body.' — literal { confirm: true } preserved — EXACT"
+  result: "PASS — all 12+ spot-checks byte-identical (6 frontend, 6+ backend incl. interpolated + em-dash + literal-brace)."
+
+aiPromptStringsLeft:
+  result: "CONFIRMED correct"
+  detail: "turnInstruction (turn/route.ts L180 open + L181 respond) are plain template literals fed into { role: 'user', content: turnInstruction } (L185) → sent to Gemini, never returned to client. Correctly NOT migrated — migrating would risk altering model behavior. Correct judgment."
+
+serverOnlyExclusions:
+  result: "CONFIRMED correct"
+  detail: "layout.tsx metadata object (L32-82: title/description/OG) uses plain string literals, NOT routed through client t(). Only runtime user-facing strings (common.skipToContent/accountNav/signOut) use t(). OG/metadata correctly excluded."
+
+coverageSanity:
+  result: "bounded-complete"
+  detail: "Spot-grepped Inc-2 (page.tsx, onboarding-dialog, error.tsx) and Inc-3 (debate/route.ts, share/route.ts) for missed user-facing PT-BR. Remaining matches all non-user-facing: JSX comments, TS type annotations, Zod error passthrough ({ error: errors }), console.error log labels."
+
+issues: []
+
+decision: "PASS — zero key-leak (90/90 resolve), all byte-identical spot-checks EXACT, AI-prompt strings correctly left, server-only metadata correctly excluded, all CI gates green. Increments 2+3 of TD-5.4b approved. This completes TD-5.4b (Inc 1+2+3). Status: InReview → Done."
