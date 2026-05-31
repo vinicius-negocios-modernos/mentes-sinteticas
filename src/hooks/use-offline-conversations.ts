@@ -25,6 +25,10 @@ export function useOfflineConversations(mindId: string) {
 
   // Track online/offline state
   useEffect(() => {
+    // Legitimate external-system sync: navigator.onLine is SSR-unsafe, so the
+    // real connectivity value must be read post-mount. Not derived render state.
+    // lint-followup (TD-2.1): candidate for useSyncExternalStore.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing initial value from navigator.onLine (external browser API, SSR-unsafe)
     setIsOffline(!navigator.onLine);
 
     const handleOffline = () => setIsOffline(true);
@@ -43,6 +47,10 @@ export function useOfflineConversations(mindId: string) {
   useEffect(() => {
     if (!isOffline || !mindId) return;
 
+    // Legitimate async data-fetch effect: kicks off an IndexedDB read (external
+    // system) and tracks loading state. setState here gates a pending request,
+    // it is not derivable during render. lint-followup (TD-2.1).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag for async IndexedDB fetch (external system)
     setIsLoading(true);
     getCachedConversationsByMind(mindId)
       .then(setCachedConversations)

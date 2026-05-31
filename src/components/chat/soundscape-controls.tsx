@@ -112,6 +112,12 @@ export default function SoundscapeControls({
 
   useEffect(() => {
     if (prevEnabledRef.current !== enabled) {
+      // Deliberate change-detection announcement for aria-live (a11y). The
+      // ref-guard ensures setState fires ONLY when `enabled` actually toggles,
+      // not on every render — moving this to render-time would re-announce on
+      // unrelated re-renders, changing observable screen-reader behavior.
+      // False positive for "you-might-not-need-an-effect". lint-followup (TD-2.1).
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional ref-guarded aria-live announcement on enabled-prop change
       setAnnouncement(
         enabled
           ? `${t("soundscape.a11yEnabled")}: ${soundscapeName ?? t("soundscape.ambientSound")}`

@@ -31,6 +31,27 @@ const fileManager = new GoogleAIFileManager(apiKey);
 const MANIFEST_PATH = path.join(process.cwd(), "data", "minds_manifest.json");
 const KNOWLEDGE_BASE_ROOT = path.join(process.cwd(), "knowledge_base");
 
+/** A single uploaded-file entry tracked in the manifest. */
+interface ManifestFileEntry {
+    name: string;
+    displayName?: string;
+    uri: string;
+    mimeType?: string;
+    localPath: string;
+    expires_at: string | null;
+}
+
+/** Per-mind manifest bucket. */
+interface ManifestMind {
+    files: ManifestFileEntry[];
+    last_updated: string | null;
+}
+
+/** Root manifest shape (data/minds_manifest.json). */
+interface Manifest {
+    minds: Record<string, ManifestMind>;
+}
+
 // Valid MIMETYPES for Gemini
 const MIME_TYPES: Record<string, string> = {
     ".pdf": "application/pdf",
@@ -42,15 +63,15 @@ const MIME_TYPES: Record<string, string> = {
     // Files without extension or unknown will be treated as text/plain
 };
 
-async function getManifest() {
+async function getManifest(): Promise<Manifest> {
     if (!fs.existsSync(MANIFEST_PATH)) {
         return { minds: {} };
     }
     const data = fs.readFileSync(MANIFEST_PATH, "utf-8");
-    return JSON.parse(data);
+    return JSON.parse(data) as Manifest;
 }
 
-async function saveManifest(data: any) {
+async function saveManifest(data: Manifest) {
     fs.writeFileSync(MANIFEST_PATH, JSON.stringify(data, null, 2));
 }
 
@@ -180,8 +201,8 @@ async function main() {
         manifest.minds[mindName] = { files: [], last_updated: null };
     }
 
-    const existingUris = new Set(manifest.minds[mindName].files.map((f: any) => f.uri));
-    const processedFiles: any[] = [...manifest.minds[mindName].files];
+    const existingUris = new Set(manifest.minds[mindName].files.map((f) => f.uri));
+    const processedFiles: ManifestFileEntry[] = [...manifest.minds[mindName].files];
 
     // Recursive function to walk directories
     async function walkAndUpload(dir: string) {
@@ -196,7 +217,7 @@ async function main() {
                 // Determine mime type
                 const ext = path.extname(entry.name).toLowerCase();
                 // Default to text/plain if extension is missing or not explicitly mapped but arguably text
-                let mimeType = MIME_TYPES[ext] || "text/plain";
+                const mimeType = MIME_TYPES[ext] || "text/plain";
 
                 // Skip hidden files (like .DS_Store)
                 if (entry.name.startsWith(".")) continue;
@@ -210,7 +231,7 @@ async function main() {
                     .normalize("NFC");
 
                 // Check if already uploaded and not expired
-                const existingEntry = processedFiles.find((f: any) => f.localPath === relativePath && existingUris.has(f.uri));
+                const existingEntry = processedFiles.find((f) => f.localPath === relativePath && existingUris.has(f.uri));
 
                 if (existingEntry) {
                     const isExpired = existingEntry.expires_at && new Date(existingEntry.expires_at) < new Date();

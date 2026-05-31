@@ -12,6 +12,16 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Framework / tooling / generated dirs — NOT project code, so they must
+    // not be linted by the project. `.aiox-core` is the AIOX framework (L1,
+    // never modified by the project), linted by the framework itself. The
+    // hook scripts and istanbul coverage output legitimately use CommonJS
+    // require()/.cjs and generated code. Keeping these in scope made CI
+    // chronically red and masked real regressions in src/ tests/ scripts/.
+    ".aiox-core/**",
+    ".claude/hooks/**",
+    ".gemini/hooks/**",
+    "coverage/**",
   ]),
 ]);
 

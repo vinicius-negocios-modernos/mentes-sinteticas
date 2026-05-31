@@ -15,7 +15,11 @@ export function OfflineIndicator() {
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    // Set initial state (only on client)
+    // Set initial state (only on client). Legitimate external-system sync:
+    // navigator.onLine is unavailable during SSR, so the real value must be
+    // read post-mount. This is a deliberate sync to a browser API, not derived
+    // render state — see lint-followup in TD-2.1 for useSyncExternalStore migration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing initial value from navigator.onLine (external browser API, SSR-unsafe)
     setIsOffline(!navigator.onLine);
 
     const handleOffline = () => setIsOffline(true);

@@ -153,6 +153,11 @@ export function useSoundscape(mindSlug: string | null): UseSoundscapeReturn {
     engine.setVolume(prefs.volume);
     engine.setEnabled(prefs.enabled);
 
+    // Legitimate external-system sync: prefs come from localStorage, which is
+    // SSR-unsafe and must be read post-mount. These setState calls hydrate React
+    // state from persisted preferences after engine init — not derivable during
+    // render (depends on SoundscapeEngine.isAvailable + feature flag). lint-followup (TD-2.1).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrating state from localStorage prefs post-mount (SSR-unsafe external system)
     setVolumeState(prefs.volume);
     setEnabled(prefs.enabled);
 
