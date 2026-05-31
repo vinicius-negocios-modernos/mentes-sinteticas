@@ -43,3 +43,32 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  # SYS-11 — Post-deploy smoke test (OPT-IN, additive).
+  # This job is a no-op until you set the repo VARIABLE `SMOKE_BASE_URL`
+  # (Settings → Secrets and variables → Actions → Variables) to the prod URL,
+  # e.g. https://mentes.negociosmodernos.cloud. It does NOT gate the build/push
+  # above (it `needs` it but failures here do not roll back the image). Because
+  # the VPS auto-deploy cron pulls ~every 1 min, we wait, then probe the real
+  # critical paths (/api/health + homepage + /api/chat liveness). A 5xx on
+  # /api/chat fails the smoke — the exact gap a `GET /` healthcheck misses.
+  #
+  # Optional: set the SECRET `SMOKE_AUTH_COOKIE` to a valid session cookie to
+  # exercise the real authenticated Gemini path instead of just liveness.
+  smoke:
+    name: Post-deploy smoke test (opt-in)
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: ${{ vars.SMOKE_BASE_URL != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wait for VPS auto-deploy cron to roll the new image
+        run: sleep "${{ vars.SMOKE_WAIT_SECONDS || '120' }}"
+
+      - name: Run smoke test against production
+        env:
+          BASE_URL: ${{ vars.SMOKE_BASE_URL }}
+          SMOKE_AUTH_COOKIE: ${{ secrets.SMOKE_AUTH_COOKIE }}
+        run: bash scripts/smoke-test.sh "$BASE_URL"

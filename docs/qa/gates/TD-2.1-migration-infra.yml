@@ -1,0 +1,32 @@
+schema: 1
+story: 'TD-2.1'
+gate: CONCERNS
+status_reason: 'Migration infra is safe and genuinely opt-in (prod boot unchanged); lint/build/tests green. Open follow-ups are non-blocking: AC1 staging up→down→baseline validation deferred and 5 documented set-state-in-effect lint-followups.'
+reviewer: 'Quinn'
+updated: '2026-05-30T21:42:00Z'
+
+executable_gate:
+  lint: { exit: 0, errors: 0, warnings: 9, note: 'pre-existing; src/+tests/ still linted, only .aiox-core/** + tooling/coverage excluded' }
+  build: { result: PASS, note: 'Compiled successfully in 10.8s' }
+  tests: { passed: 350, total: 350, files: 28, note: 'incl. cron-alerting.test.ts (3 tests)' }
+  shell_syntax: { result: PASS, scripts: [migrate.sh, docker-entrypoint.sh, smoke-test.sh, renew-uris.sh] }
+
+production_safety:
+  prod_boot_unchanged: true
+  evidence:
+    - 'Dockerfile CMD ["node","server.js"] (line 30) — no ENTRYPOINT to docker-entrypoint.sh'
+    - 'docker-compose*.yml — zero RUN_MIGRATIONS_ON_BOOT / docker-entrypoint / migrate refs'
+    - 'docker-entrypoint.sh gated on RUN_MIGRATIONS_ON_BOOT (default false) → exec node server.js'
+    - 'deploy.yml smoke job if: vars.SMOKE_BASE_URL != "" (no-op + non-blocking, does not roll back image)'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: low
+    finding: 'AC1 up→down→baseline staging validation deferred (requires staging + prod dump; no prod connection this session).'
+    suggested_action: 'Execute the runbook validation procedure against staging before TD-3.1 DDL hardening runs.'
+  - id: 'MNT-001'
+    severity: low
+    finding: '5 documented eslint-disable set-state-in-effect sites (offline-indicator, use-offline-conversations x2, use-soundscape, soundscape-controls) — legitimate SSR-unsafe external-system syncs, but rule suppressed.'
+    suggested_action: 'Refactor to useSyncExternalStore with component tests in a future story (lint-followup).'
+
+waiver: { active: false }
