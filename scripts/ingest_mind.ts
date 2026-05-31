@@ -100,6 +100,10 @@ async function upsertFileUriCache(
     try {
         const { db, schema } = await getDbModules();
 
+        // NFC-normalize before DB compare (TD-0.1 / DB-3): guarantees equality
+        // matching against NFC-stored local_path even if caller passed NFD.
+        const normalizedPath = relativePath.normalize("NFC");
+
         // Find the mind by name
         const mind = await db.query.minds.findFirst({
             where: eq(schema.minds.name, mindName),
@@ -112,12 +116,12 @@ async function upsertFileUriCache(
         // Find the knowledge document by localPath and mindId
         const doc = await db.query.knowledgeDocuments.findFirst({
             where: and(
-                eq(schema.knowledgeDocuments.localPath, relativePath),
+                eq(schema.knowledgeDocuments.localPath, normalizedPath),
                 eq(schema.knowledgeDocuments.mindId, mind.id),
             ),
         });
         if (!doc) {
-            console.warn(`[DB] Knowledge document not found for "${relativePath}", skipping cache upsert.`);
+            console.warn(`[DB] Knowledge document not found for "${normalizedPath}", skipping cache upsert.`);
             return;
         }
 
@@ -197,7 +201,13 @@ async function main() {
                 // Skip hidden files (like .DS_Store)
                 if (entry.name.startsWith(".")) continue;
 
-                const relativePath = path.relative(KNOWLEDGE_BASE_ROOT, fullPath);
+                // Normalize to NFC (TD-0.1 / DB-3): macOS returns paths in NFD,
+                // which breaks equality JOINs against DB-stored local_path.
+                // Normalizing here propagates a consistent NFC form to both the
+                // manifest and the file_uri_cache lookup.
+                const relativePath = path
+                    .relative(KNOWLEDGE_BASE_ROOT, fullPath)
+                    .normalize("NFC");
 
                 // Check if already uploaded and not expired
                 const existingEntry = processedFiles.find((f: any) => f.localPath === relativePath && existingUris.has(f.uri));

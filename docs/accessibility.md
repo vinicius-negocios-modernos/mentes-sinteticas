@@ -1,28 +1,39 @@
 # Acessibilidade — Mentes Sinteticas
 
-Este documento descreve as praticas de acessibilidade implementadas no Mentes Sinteticas, seguindo as diretrizes WCAG 2.1 Level AA.
+Este documento descreve as praticas de acessibilidade implementadas no Mentes Sinteticas, tendo como **alvo** as diretrizes WCAG 2.1 Level AA.
+
+> **Status de conformidade: AA-targeted, validacao pendente.** A maioria dos
+> criterios abaixo esta implementada em codigo, porem a conformidade AA ainda
+> **nao foi validada formalmente**. A validacao final depende de duas etapas
+> ainda pendentes: auditoria automatizada (Lighthouse / QG2) e walkthrough
+> manual com leitor de tela (VoiceOver / QG3). Ate que essas validacoes sejam
+> concluidas, este documento descreve a *intencao de conformidade*, nao uma
+> certificacao AA.
 
 ---
 
 ## Conformidade
 
-O Mentes Sinteticas busca conformidade com o **WCAG 2.1 Level AA**. Os seguintes criterios sao atendidos:
+O Mentes Sinteticas tem como **alvo** a conformidade com o **WCAG 2.1 Level AA**.
+Os criterios abaixo estao implementados em codigo; o status "Implementado
+(validacao pendente)" indica que o criterio foi endereçado na implementacao mas
+ainda aguarda verificacao formal (Lighthouse/QG2 + VoiceOver/QG3).
 
 | Criterio | Descricao | Status |
 |----------|-----------|--------|
-| 1.1.1 | Conteudo nao-textual (alt text, aria-hidden em icones decorativos) | Implementado |
-| 1.3.1 | Informacao e relacoes (landmarks, headings, roles semanticos) | Implementado |
-| 1.3.2 | Sequencia significativa (ordem DOM logica) | Implementado |
-| 1.4.1 | Uso de cor (informacoes nao dependem apenas de cor) | Implementado |
-| 1.4.3 | Contraste minimo (4.5:1 texto, 3:1 texto grande) | Implementado |
-| 1.4.11 | Contraste de componentes nao-textuais (3:1 bordas/icones) | Implementado |
-| 2.1.1 | Teclado (todas funcoes acessiveis via teclado) | Implementado |
-| 2.4.1 | Ignorar blocos (estrutura de landmarks) | Implementado |
-| 2.4.3 | Ordem de foco (sequencia logica de tabulacao) | Implementado |
-| 2.4.7 | Foco visivel (focus-visible em todos elementos interativos) | Implementado |
-| 2.5.5 | Tamanho do alvo (minimo 44x44px em controles touch) | Implementado |
-| 3.1.1 | Idioma da pagina (lang="pt-BR" no html) | Implementado |
-| 4.1.2 | Nome, funcao, valor (aria-label, roles, estados) | Implementado |
+| 1.1.1 | Conteudo nao-textual (alt text, aria-hidden em icones decorativos) | Implementado (validacao pendente) |
+| 1.3.1 | Informacao e relacoes (landmarks, headings, roles semanticos) | Implementado (validacao pendente) |
+| 1.3.2 | Sequencia significativa (ordem DOM logica) | Implementado (validacao pendente) |
+| 1.4.1 | Uso de cor (informacoes nao dependem apenas de cor) | Implementado (validacao pendente) |
+| 1.4.3 | Contraste minimo (4.5:1 texto, 3:1 texto grande) | Implementado (validacao pendente) |
+| 1.4.11 | Contraste de componentes nao-textuais (3:1 bordas/icones) | Implementado (validacao pendente) |
+| 2.1.1 | Teclado (todas funcoes acessiveis via teclado) | Implementado (validacao pendente) |
+| 2.4.1 | Ignorar blocos (skip-link "Pular para conteudo principal" + landmarks) | Implementado (validacao pendente) |
+| 2.4.3 | Ordem de foco (sequencia logica de tabulacao) | Implementado (validacao pendente) |
+| 2.4.7 | Foco visivel (focus-visible em todos elementos interativos) | Implementado (validacao pendente) |
+| 2.5.5 | Tamanho do alvo (minimo 44x44px em controles touch) | Implementado (validacao pendente) |
+| 3.1.1 | Idioma da pagina (lang="pt-BR" no html) | Implementado (validacao pendente) |
+| 4.1.2 | Nome, funcao, valor (aria-label, roles, estados) | Implementado (validacao pendente) |
 
 ---
 
@@ -88,12 +99,18 @@ O Mentes Sinteticas busca conformidade com o **WCAG 2.1 Level AA**. Os seguintes
 
 ## Tecnologias Assistivas
 
-### Screen Readers Testados
+### Screen Readers — Validacao Pendente
 
-| Leitor de Tela | Navegador | Plataforma |
-|----------------|-----------|------------|
-| VoiceOver | Safari | macOS |
-| VoiceOver | Chrome | macOS |
+O walkthrough manual com leitor de tela (QG3) ainda **nao foi concluido**. Os
+alvos de validacao sao:
+
+| Leitor de Tela | Navegador | Plataforma | Status |
+|----------------|-----------|------------|--------|
+| VoiceOver | Safari | macOS | Validacao pendente (QG3) |
+| VoiceOver | Chrome | macOS | Validacao pendente (QG3) |
+
+Os recursos abaixo estao implementados em codigo com esses leitores como alvo,
+mas o comportamento real ainda nao foi verificado manualmente.
 
 ### Recursos para Screen Readers
 
@@ -196,7 +213,6 @@ Todas as animacoes e transicoes respeitam esta preferencia:
 
 | Limitacao | Descricao | Impacto |
 |-----------|-----------|---------|
-| Skip-to-content | Nao ha link de "pular para conteudo principal" | Usuarios de teclado precisam tabular pelo header |
 | Modo de Voz — feedback visual | O modo de voz depende da Web Speech API nativa, que nao oferece feedback textual em tempo real durante reconhecimento | Usuarios de screen reader podem preferir digitacao |
 | Soundscapes — controle fino | Controles de volume individuais por camada de audio podem ser complexos para navegacao por teclado | Muitos Tab stops quando multiplos sliders ativos |
 | Testes com NVDA/JAWS | Apenas VoiceOver (macOS) foi testado | Comportamento pode variar em Windows |
@@ -226,4 +242,4 @@ Se voce encontrar barreiras de acessibilidade no Mentes Sinteticas, por favor re
 
 ---
 
-*Ultima atualizacao: Marco 2026 — Fase 6 (Story 6.9 A11y Pass 2)*
+*Ultima atualizacao: Maio 2026 — TD-0.1 (reconciliacao do doc: claim rebaixado para AA-targeted, skip-link confirmado existente, validacao QG2/QG3 pendente)*

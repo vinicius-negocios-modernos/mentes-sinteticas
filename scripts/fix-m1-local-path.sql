@@ -1,13 +1,28 @@
--- Fix M1 knowledge document local_path and insert missing file_uri_cache entry
--- Problem: local_path was missing .md extension, causing JOIN failure during ingest
--- Result: M1 had no cached Gemini file URI (20/21 instead of 21/21)
+-- =============================================================================
+-- DEPRECATED — DO NOT RUN / DO NOT REUSE AS TEMPLATE (TD-0.1 / DB-4)
+-- =============================================================================
+-- This is a one-off remediation artifact from a past incident (M1 local_path
+-- missing .md extension). It is kept only for historical/audit reference.
+--
+-- Why deprecated:
+--   * `knowledge_documents` has NO `updated_at` column. The original Step 1
+--     wrote `updated_at = NOW()`, which would error. It never corrupted prod
+--     because the whole script runs inside BEGIN/COMMIT (an error aborts the
+--     transaction and rolls back). The offending column write has been removed.
+--   * The hardcoded file_uri / expires_at values below are long expired and
+--     specific to a single historical run — not reusable.
+--   * Going forward, local_path values are NFC-normalized at ingest time
+--     (see scripts/ingest_mind.ts), removing the root cause of JOIN mismatch.
+--
+-- If a similar fix is ever needed, write a fresh script — do not copy this one.
+-- =============================================================================
 
 BEGIN;
 
 -- Step 1: Fix local_path in knowledge_documents (add missing .md extension)
+-- NOTE: `updated_at` write removed — knowledge_documents has no such column.
 UPDATE knowledge_documents
-SET local_path = 'Antonio Napole/M1 - História de Vida e Formação.md',
-    updated_at = NOW()
+SET local_path = 'Antonio Napole/M1 - História de Vida e Formação.md'
 WHERE local_path = 'Antonio Napole/M1 - História de Vida e Formação';
 
 -- Step 2: Insert missing file_uri_cache entry for M1

@@ -21,6 +21,20 @@ import { getSoundscapeConfig } from "@/lib/audio/soundscape-config";
 /** localStorage key for soundscape preferences */
 const PREFS_KEY = "synkra-soundscape-prefs";
 
+/**
+ * Master feature flag for soundscapes.
+ *
+ * Defaults to OFF. The feature only activates when
+ * `NEXT_PUBLIC_SOUNDSCAPES_ENABLED` is explicitly set to "true".
+ *
+ * Rationale (TD-0.1 / UX-1): the shipped soundscape assets are
+ * non-functional placeholders, so the feature is gated off to avoid
+ * exposing a broken audio promise. The engine/UI code is preserved and
+ * re-enables instantly once real assets land and the env var is set.
+ */
+export const SOUNDSCAPES_FEATURE_ENABLED =
+  process.env.NEXT_PUBLIC_SOUNDSCAPES_ENABLED === "true";
+
 interface SoundscapePrefs {
   volume: number;
   muted: boolean;
@@ -125,6 +139,8 @@ export function useSoundscape(mindSlug: string | null): UseSoundscapeReturn {
 
   // Initialize engine + load prefs
   useEffect(() => {
+    // Feature flag gate (TD-0.1 / UX-1): skip all audio init when off
+    if (!SOUNDSCAPES_FEATURE_ENABLED) return;
     if (!SoundscapeEngine.isAvailable()) return;
 
     const prefs = loadPrefs();
@@ -297,7 +313,8 @@ export function useSoundscape(mindSlug: string | null): UseSoundscapeReturn {
   return {
     volume,
     muted,
-    enabled,
+    // Feature flag forces enabled off regardless of persisted prefs (UX-1)
+    enabled: SOUNDSCAPES_FEATURE_ENABLED && enabled,
     playing,
     autoplayBlocked,
     reducedMotionMuted,

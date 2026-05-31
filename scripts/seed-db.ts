@@ -115,9 +115,16 @@ async function seed() {
         docId = existingDocs[0].id;
         console.log(`  Doc "${file.displayName}" already exists (id: ${docId}).`);
       } else {
+        // NFC-normalize local_path (TD-0.1 / DB-3): keeps stored paths in a
+        // consistent NFC form so equality JOINs (e.g. file_uri_cache lookup
+        // during ingest) match reliably across macOS (NFD) sources.
+        const normalizedLocalPath = file.localPath
+          ? file.localPath.normalize("NFC")
+          : file.localPath;
+
         // Derive storage_path from localPath: knowledge-base/{localPath}
-        const storagePath = file.localPath
-          ? `knowledge-base/${file.localPath}`
+        const storagePath = normalizedLocalPath
+          ? `knowledge-base/${normalizedLocalPath}`
           : null;
 
         const [doc] = await db
@@ -125,7 +132,7 @@ async function seed() {
           .values({
             mindId,
             displayName: file.displayName,
-            localPath: file.localPath,
+            localPath: normalizedLocalPath,
             storagePath,
             description: null,
           })

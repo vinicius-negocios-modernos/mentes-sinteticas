@@ -9,7 +9,10 @@
 
 "use client";
 
-import { useSoundscape } from "@/hooks/use-soundscape";
+import {
+  useSoundscape,
+  SOUNDSCAPES_FEATURE_ENABLED,
+} from "@/hooks/use-soundscape";
 import SoundscapeControls from "@/components/chat/soundscape-controls";
 
 interface ChatSoundscapeBarProps {
@@ -18,6 +21,10 @@ interface ChatSoundscapeBarProps {
 
 export default function ChatSoundscapeBar({ mindSlug }: ChatSoundscapeBarProps) {
   const soundscape = useSoundscape(mindSlug);
+
+  // Feature flag off by default (TD-0.1 / UX-1): hide the control entirely
+  // so no broken audio promise is exposed in the UI.
+  if (!SOUNDSCAPES_FEATURE_ENABLED) return null;
 
   return (
     <div className="flex justify-end px-2 -mt-4 mb-2 relative z-10">

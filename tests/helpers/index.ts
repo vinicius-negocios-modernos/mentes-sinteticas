@@ -20,8 +20,6 @@ export {
   mockAuth,
   mockSignOut,
   authMockModule,
-  authServerMockModule,
-  authSsrMockModule,
   mockAuthenticatedUser,
   mockUnauthenticatedUser,
   mockAuthError,
